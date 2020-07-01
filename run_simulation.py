@@ -3,6 +3,8 @@ import argparse
 import yaml
 import pprint
 
+from src.game import *
+
 
 def _parse_args():
     parser = argparse.ArgumentParser()
@@ -31,8 +33,11 @@ def main():
     params = read_parameters()
     pprint.pprint(params)
 
+    game = Game(params)
+    game.display()
+
     end = time.time()
-    print("Simulation took: ", end - start)
+    print("Simulation took {:.3f} seconds.".format(end - start))
 
 
 if __name__ == '__main__':
