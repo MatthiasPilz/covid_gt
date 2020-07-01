@@ -6,6 +6,7 @@ schedule-length: 280
 start-date: '23/03/2020'
 output-dir: './results/'
 demand-file: './data/covid_allDemand.csv'
+debug-flag: False
 
 
 # pricing
@@ -16,9 +17,9 @@ pricing-coeff:
 
 
 # storage
-charge-rate: 1000000
-discharge-rate: -1000000
-initial-soc: 0
+storage-rate: 1000000
+usage-rate: -1000000
+initial-state: 0
 max-capacity: 10000000000
 min-capacity: 0
 

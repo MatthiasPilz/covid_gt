@@ -1,40 +1,25 @@
 import time
 import argparse
-import yaml
-import pprint
 
 from src.game import *
 
 
-def _parse_args():
+def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--config",      "-c", required=True, help="config file location")
 
     return parser.parse_args()
 
 
-def read_parameters():
-    args = _parse_args()
-    configFile = args.config
-    params = {}
-    try:
-        with open(configFile, 'r') as file:
-            # all the parameters from the config file
-            params = yaml.load(file, Loader=yaml.SafeLoader)
-    except Exception as e:
-        print('*** Error reading the config file - ' + str(e))
-
-    return params
-
-
 def main():
     start = time.time()
 
-    params = read_parameters()
-    pprint.pprint(params)
+    args = parse_args()
+    config_file = args.config
 
-    game = Game(params)
-    game.display()
+    game = Game(config_file)
+    if game.debug_state():
+        game.display()
 
     end = time.time()
     print("Simulation took {:.3f} seconds.".format(end - start))
