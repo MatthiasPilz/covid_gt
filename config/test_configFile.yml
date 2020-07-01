@@ -1,0 +1,46 @@
+# config file containing all(!) simulation parameters
+
+# general
+num-players: 7
+schedule-length: 280
+start-date: '2013-03-23 01:00:00'
+output-dir: './results/'
+
+
+# pricing
+pricing-coeff:
+  0: 0.0
+  1: 1.0
+  2: 1.0
+
+
+# the players
+player-0:
+  demand-file: './data/covid_east.csv'
+  
+player-1:
+  demand-file: './data/covid_london.csv'
+
+player-2:
+  demand-file: './data/covid_midlands.csv'
+
+player-3:
+  demand-file: './data/covid_northEast.csv'
+
+player-4:
+  demand-file: './data/covid_northWest.csv'
+
+player-5:
+  demand-file: './data/covid_southEast.csv'
+
+player-6:
+  demand-file: './data/covid_southWest.csv'
+
+
+# storage
+charge-rate: 1000000
+discharge-rate: -1000000
+initial-soc: 0
+max-capacity: 10000000000
+min-capacity: 0
+
