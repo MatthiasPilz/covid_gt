@@ -5,7 +5,7 @@ num-players: 7
 schedule-length: 280
 start-date: '23/03/2020'
 output-dir: './results/'
-demand: './data/covid_allDemand.csv'
+demand-file: './data/covid_allDemand.csv'
 
 
 # pricing
