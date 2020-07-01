@@ -5,7 +5,7 @@ class Game:
     def __init__(self, params):
         self.num_players = int(params['num-players'])
         self.schedule_length = int(params['schedule-length'])
-        self.start_date = datetime.datetime.strptime(params['start-date'], '%Y-%m-%d %H:%M:%S')
+        self.start_date = datetime.datetime.strptime(params['start-date'], '%d/%m/%Y')
         self.end_date = self.start_date + datetime.timedelta(days=self.schedule_length)
 
         self.pricing_parameter = []
