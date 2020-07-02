@@ -15,19 +15,18 @@ class Game:
         self._end_date = self._start_date + datetime.timedelta(days=self._schedule_length)
 
         dateparse = lambda x: datetime.datetime.strptime(x, '%d/%m/%Y')
-        self._demand = pd.read_csv(params['demand-file'],
-                                   sep = ',',
-                                   skipinitialspace = True,
-                                   dtype={'east': np.int32,
-                                          'london': np.int32,
-                                          'midlands': np.int32,
-                                          'north_east': np.int32,
-                                          'north_west': np.int32,
-                                          'south_east': np.int32,
-                                          'south_west': np.int32, },
-                                   parse_dates=['date'],
-                                   date_parser=dateparse)
-        self.net_demand = self._demand.copy()
+        self.__demand = pd.read_csv(params['demand-file'],
+                                    sep = ',',
+                                    skipinitialspace = True,
+                                    dtype={'east': np.int32,
+                                           'london': np.int32,
+                                           'midlands': np.int32,
+                                           'north_east': np.int32,
+                                           'north_west': np.int32,
+                                           'south_east': np.int32,
+                                           'south_west': np.int32, },
+                                    parse_dates=['date'],
+                                    date_parser=dateparse)
 
         # pricing
         self._pricing_parameter = []
@@ -45,6 +44,18 @@ class Game:
         if self.debug_state():
             self.check_initialisation()
 
+        # more fields for eventual computations
+        self._players = self.get_players()
+        self.__schedules = dict()
+        for p in self._players:
+            s = np.zeros(self._schedule_length, dtype=np.int32)
+            self.__schedules[p] = s
+
+        # derive index from dates..
+        self._start_index = self.get_start_index()
+        self._end_index = self._start_index + self._schedule_length
+        assert self.__demand['date'][self._end_index] == self._end_date, "end date and index don't match"
+
     @staticmethod
     def read_parameters(config_file):
         params = {}
@@ -60,11 +71,11 @@ class Game:
         return self._debug_flag
 
     def check_initialisation(self):
-        assert self._num_players == self._demand.shape[1]-1, "number of players should match number of columns in file!"
+        assert self._num_players == self.__demand.shape[1]-1, "number of players should match number of columns in file!"
         flag_pricing_parameter = (self._pricing_parameter[1] != 0.0 or self._pricing_parameter[2] != 0.0)
         assert flag_pricing_parameter, "at least one of the cost-coefficients needs to be different from zero!"
-        assert (self._start_date == self._demand['date']).any(), "start date needs to be within data range"
-        assert (self._end_date == self._demand['date']).any(), "end date needs to be within data range"
+        assert (self._start_date == self.__demand['date']).any(), "start date needs to be within data range"
+        assert (self._end_date == self.__demand['date']).any(), "end date needs to be within data range"
         assert self._storage_rate > 0, "storage rate needs to be larger than zero"
         assert self._usage_rate < 0, "usage rate needs to be smaller than zero"
         assert self._max_capacity >= 0, "max capacity needs to be larger than zero"
@@ -76,11 +87,16 @@ class Game:
         """Display Configuration values."""
         print("\ngame class variables:")
         for a in dir(self):
-            if not a.startswith("__") and not callable(getattr(self, a)):
-                print("{:30} {}".format(a, getattr(self, a)))
+            if not callable(getattr(self, a)):
+                if "__" not in a:
+                    print("{:30} {}".format(a, getattr(self, a)))
         print("\n")
 
     def get_players(self):
-        players = list(self._demand.columns)
+        players = list(self.__demand.columns)
         players.pop(0)
         return players
+
+    def get_start_index(self):
+        temp = self.__demand['date'].isin([self._start_date]).to_list()
+        return temp.index(True)
