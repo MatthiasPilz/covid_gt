@@ -4,7 +4,7 @@ debug-flag: True
 
 # general
 num-players: 7
-schedule-length: 20
+schedule-length: 6
 start-date: '23/03/2020'
 output-dir: './results/'
 demand-file: './data/covid_allDemand.csv'
@@ -13,8 +13,8 @@ demand-file: './data/covid_allDemand.csv'
 # pricing
 pricing-coeff:
   0: 0.0
-  1: 1.0
-  2: 1.0
+  1: 0.0000000001
+  2: 0.0000000001
 
 
 # storage

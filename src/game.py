@@ -4,6 +4,7 @@ import yaml
 import pandas as pd
 import numpy as np
 import random
+from scipy.optimize import minimize, LinearConstraint
 
 
 class Game:
@@ -59,6 +60,12 @@ class Game:
         self._start_index = self.get_start_index()
         self._end_index = self._start_index + self._schedule_length
         assert self.__demand['date'][self._end_index] == self._end_date, "end date and index don't match"
+
+        self._L = self.create_empty_arrays()
+        for p in self._players:
+            self._L[p] = self.calc_current_load_of_others(p)
+        self._demand_current_player = np.zeros(self._schedule_length)
+        self._load_other_players = np.zeros(self._schedule_length)
 
     @staticmethod
     def read_parameters(config_file):
@@ -118,7 +125,8 @@ class Game:
         start = time.time()
         end = start + self._max_time
 
-        load_of_others = self.create_empty_arrays()
+        # initialise random schedules
+        self.set_random_schedule()
 
         num_iterations = 0
         flag_convergence = False
@@ -128,9 +136,9 @@ class Game:
             solution_profile = self.copy_schedules_to_solution()
 
             for p in self._players:
-                load_of_others[p] = self.calc_current_load_of_others(p)
                 # TODO: need to make this function perform the optimisation
-                self.__schedules[p] = self.find_optimal_response(p, load_of_others[p])
+                self.update_variables(p)
+                self.__schedules[p] = self.find_optimal_response(p)
 
             flag_convergence = self.check_for_convergence(solution_profile)
             flag_time_is_up = True if time.time() > end else False
@@ -140,11 +148,11 @@ class Game:
             print("number of iterations: {}".format(num_iterations))
             print("execution time for solver: {:.3f}s".format(time.time()-start))
 
-        # TODO: needs to be removed in the actual code
-        #  set schedule to something random
-        self.set_random_schedule()
-
         return flag_convergence
+
+    def update_variables(self, p):
+        self._demand_current_player = self.get_demand()[p]
+        self._load_other_players = self.calc_current_load_of_others(p)
 
     def copy_schedules_to_solution(self):
         solution = self.create_empty_arrays()
@@ -203,9 +211,35 @@ class Game:
 
         return costs, costs_ref
 
+    def objective(self, x):
+        costs = 0
+        for i in range(self._schedule_length):
+            price = self._pricing_parameter[2] * (self._load_other_players[i] + self._demand_current_player[i] + x[i])**2 + \
+                    self._pricing_parameter[1] * (self._load_other_players[i] + self._demand_current_player[i] + x[i]) + \
+                    self._pricing_parameter[0]
+            costs += (price * (self._demand_current_player[i] + x[i]))
+            # costs += price
+        return costs
+
     # TODO: this is the key function!
-    def find_optimal_response(self, p, L):
-        return np.zeros(self._schedule_length)
+    def find_optimal_response(self, p):
+
+        x_0 = self.__schedules[p]
+
+        lb = np.zeros(self._schedule_length)
+        A = np.eye(self._schedule_length)
+        for i in range(self._schedule_length):
+            for j in range(self._schedule_length):
+                if j < i:
+                    A[i][j] = -1
+
+        ub = np.empty(self._schedule_length)
+        ub.fill(np.inf)
+
+        cons = {'type': 'ineq', 'fun': lambda x: -(A @ x - lb)}
+
+        res = minimize(self.objective, x_0, method='SLSQP', constraints=cons)
+        return res.x
 
     def check_for_convergence(self, solution):
         val = 0
