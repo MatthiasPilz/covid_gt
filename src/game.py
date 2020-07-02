@@ -51,8 +51,8 @@ class Game:
             self.check_initialisation()
 
         # more fields for eventual computations
-        self._players = self.get_players()
-        self.__schedules = self.create_empty_schedules()
+        self._players = self.determine_players()
+        self.__schedules = self.create_empty_arrays()
 
         # derive index from dates..
         self._start_index = self.get_start_index()
@@ -97,12 +97,12 @@ class Game:
                     print("{:30} {}".format(a, getattr(self, a)))
         print("\n")
 
-    def get_players(self):
+    def determine_players(self):
         players = list(self.__demand.columns)
         players.pop(0)
         return players
 
-    def create_empty_schedules(self):
+    def create_empty_arrays(self):
         schedules = dict()
         for p in self._players:
             s = np.zeros(self._schedule_length, dtype=np.int32)
@@ -132,17 +132,20 @@ class Game:
             flag_time_is_up = True if time.time() > end else False
             num_iterations += 1
 
+        if self._debug_flag:
+            print("number of iterations: {}".format(num_iterations))
+            print("execution time for solver: {:.3f}s".format(time.time()-start))
         return flag_convergence
 
     def copy_schedules_to_solution(self):
-        solution = self.create_empty_schedules()
+        solution = self.create_empty_arrays()
         for p in self._players:
             for i in range(self._schedule_length):
                 solution[p][i] = self.__schedules[p][i]
         return solution
 
     def calc_current_demand_of_others(self):
-        L = self.create_empty_schedules()
+        L = self.create_empty_arrays()
         for p in self._players:
             for i in range(self._schedule_length):
                 for other in self._players:
@@ -165,3 +168,24 @@ class Game:
         val /= self._schedule_length
 
         return True if val < self._eps else False
+
+    # getter
+    def get_players(self):
+        return self._players
+
+    def get_schedules(self):
+        return self.__schedules
+
+    def get_demand(self):
+        demand = self.create_empty_arrays()
+        for p in self._players:
+            for i in range(self._schedule_length):
+                demand[p][i] = self.__demand[p][i + self._start_index]
+        return demand
+
+    def get_dates(self):
+        dates = []
+        for i in range(self._schedule_length):
+            dates.append(self.__demand['date'][i + self._start_index].strftime("%d/%m"))
+        return dates
+

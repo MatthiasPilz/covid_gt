@@ -1,12 +1,13 @@
 # config file containing all(!) simulation parameters
 
+debug-flag: True
+
 # general
 num-players: 7
-schedule-length: 280
+schedule-length: 10
 start-date: '23/03/2020'
 output-dir: './results/'
 demand-file: './data/covid_allDemand.csv'
-debug-flag: True
 
 
 # pricing
