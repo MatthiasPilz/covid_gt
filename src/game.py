@@ -1,4 +1,5 @@
 import datetime
+import time
 import yaml
 import pandas as pd
 import numpy as np
@@ -41,15 +42,17 @@ class Game:
         self._max_capacity = params['max-capacity']
         self._min_capacity = params['min-capacity']
 
+        # iteration
+        self._eps = params['eps']
+        self._max_iter = params['max-iter']
+        self._max_time = params['max-time']
+
         if self.debug_state():
             self.check_initialisation()
 
         # more fields for eventual computations
         self._players = self.get_players()
-        self.__schedules = dict()
-        for p in self._players:
-            s = np.zeros(self._schedule_length, dtype=np.int32)
-            self.__schedules[p] = s
+        self.__schedules = self.create_empty_schedules()
 
         # derive index from dates..
         self._start_index = self.get_start_index()
@@ -82,6 +85,8 @@ class Game:
         assert self._min_capacity >= 0, "min capacity needs to be non-negative"
         flag_initial_state = self._min_capacity <= self._initial_state <= self._max_capacity
         assert flag_initial_state, "initial state not within the storage limits"
+        assert self._max_time > 0, "iteration time needs to be larger than zero"
+        assert self._max_iter >= 1, "need to perform at least one iteration"
 
     def display(self):
         """Display Configuration values."""
@@ -97,6 +102,66 @@ class Game:
         players.pop(0)
         return players
 
+    def create_empty_schedules(self):
+        schedules = dict()
+        for p in self._players:
+            s = np.zeros(self._schedule_length, dtype=np.int32)
+            schedules[p] = s
+        return schedules
+
     def get_start_index(self):
         temp = self.__demand['date'].isin([self._start_date]).to_list()
         return temp.index(True)
+
+    def solve_game(self):
+        start = time.time()
+        end = start + self._max_time
+
+        num_iterations = 0
+        flag_convergence = False
+        flag_time_is_up = False
+
+        while num_iterations < self._max_iter and not flag_convergence and not flag_time_is_up:
+            solution_profile = self.copy_schedules_to_solution()
+
+            for p in self._players:
+                demand_of_others = self.calc_current_demand_of_others()
+                self.__schedules[p] = self.find_optimal_response(p, demand_of_others[p])
+
+            flag_convergence = self.check_for_convergence(solution_profile)
+            flag_time_is_up = True if time.time() > end else False
+            num_iterations += 1
+
+        return flag_convergence
+
+    def copy_schedules_to_solution(self):
+        solution = self.create_empty_schedules()
+        for p in self._players:
+            for i in range(self._schedule_length):
+                solution[p][i] = self.__schedules[p][i]
+        return solution
+
+    def calc_current_demand_of_others(self):
+        L = self.create_empty_schedules()
+        for p in self._players:
+            for i in range(self._schedule_length):
+                for other in self._players:
+                    if other == p:
+                        continue
+
+                    L[p][i] += self.__demand[other][i+self._start_index] + self.__schedules[other][i]
+        return L
+
+    def find_optimal_response(self, player, demand_of_others):
+        return np.zeros(self._schedule_length)
+
+    def check_for_convergence(self, solution):
+        val = 0
+        for p in self._players:
+            for i in range(self._schedule_length):
+                val += (self.__schedules[p][i] - solution[p][i])**2
+
+        val = np.sqrt(val)
+        val /= self._schedule_length
+
+        return True if val < self._eps else False

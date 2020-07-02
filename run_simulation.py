@@ -18,6 +18,11 @@ def main():
     if game.debug_state():
         game.display()
 
+    if game.solve_game():
+        print("Iteration converged!")
+    else:
+        print("Iteration did not converge!")
+
 
 if __name__ == '__main__':
     start = time.time()
