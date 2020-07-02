@@ -189,12 +189,15 @@ class Game:
                 total_load = self.__demand[p][i+self._start_index] + L[p][i] + self.__schedules[p][i]
                 total_load_ref = self.__demand[p][i+self._start_index] + L_ref[p][i]
 
-                costs[p] += self._pricing_parameter[2] * total_load**2 + \
-                         self._pricing_parameter[1] * total_load + \
-                         self._pricing_parameter[0]
-                costs_ref[p] += self._pricing_parameter[2] * total_load_ref**2 + \
-                             self._pricing_parameter[1] * total_load_ref + \
-                             self._pricing_parameter[0]
+                total_price = self._pricing_parameter[2] * total_load**2 + \
+                              self._pricing_parameter[1] * total_load + \
+                              self._pricing_parameter[0]
+                total_price_ref = self._pricing_parameter[2] * total_load_ref**2 + \
+                                  self._pricing_parameter[1] * total_load_ref + \
+                                  self._pricing_parameter[0]
+
+                costs[p] += (self.__demand[p][i+self._start_index] + self.__schedules[p][i])*total_price
+                costs_ref[p] += self.__demand[p][i+self._start_index] * total_price_ref
             costs[p] = int(costs[p])
             costs_ref[p] = int(costs_ref[p])
 

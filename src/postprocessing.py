@@ -61,3 +61,10 @@ def plot_storage(p, s, t):
     plt.title("stored PPE")
     plt.legend(p)
     plt.show()
+
+
+def calc_savings(costs, ref, p):
+    savings = dict()
+    for player in p:
+        savings[player] = (1 - (costs[player] / ref[player]))*100
+    return savings

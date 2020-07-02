@@ -31,8 +31,8 @@ def main():
     if args.write:
         # output to files
         costs, costs_ref = game.calc_costs_for_all()
-        pprint.pprint(costs, costs_ref)
-        pprint.pprint(calc_savings(costs, costs_ref))
+        pprint.pprint([costs, costs_ref])
+        pprint.pprint(calc_savings(costs, costs_ref, game.get_players()))
 
 
 if __name__ == '__main__':
