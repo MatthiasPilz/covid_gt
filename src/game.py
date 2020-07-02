@@ -3,6 +3,7 @@ import time
 import yaml
 import pandas as pd
 import numpy as np
+import random
 
 
 class Game:
@@ -117,6 +118,8 @@ class Game:
         start = time.time()
         end = start + self._max_time
 
+        load_of_others = self.create_empty_arrays()
+
         num_iterations = 0
         flag_convergence = False
         flag_time_is_up = False
@@ -125,8 +128,9 @@ class Game:
             solution_profile = self.copy_schedules_to_solution()
 
             for p in self._players:
-                demand_of_others = self.calc_current_demand_of_others()
-                self.__schedules[p] = self.find_optimal_response(p, demand_of_others[p])
+                load_of_others[p] = self.calc_current_load_of_others(p)
+                # TODO: need to make this function perform the optimisation
+                self.__schedules[p] = self.find_optimal_response(p, load_of_others[p])
 
             flag_convergence = self.check_for_convergence(solution_profile)
             flag_time_is_up = True if time.time() > end else False
@@ -135,6 +139,11 @@ class Game:
         if self._debug_flag:
             print("number of iterations: {}".format(num_iterations))
             print("execution time for solver: {:.3f}s".format(time.time()-start))
+
+        # TODO: needs to be removed in the actual code
+        #  set schedule to something random
+        self.set_random_schedule()
+
         return flag_convergence
 
     def copy_schedules_to_solution(self):
@@ -144,18 +153,55 @@ class Game:
                 solution[p][i] = self.__schedules[p][i]
         return solution
 
-    def calc_current_demand_of_others(self):
-        L = self.create_empty_arrays()
-        for p in self._players:
-            for i in range(self._schedule_length):
-                for other in self._players:
-                    if other == p:
-                        continue
-
-                    L[p][i] += self.__demand[other][i+self._start_index] + self.__schedules[other][i]
+    def calc_current_load_of_others(self, p):
+        L = np.zeros(self._schedule_length)
+        for i in range(self._schedule_length):
+            for other in self._players:
+                if other == p:
+                    continue
+                L[i] += self.__demand[other][i+self._start_index] + self.__schedules[other][i]
         return L
 
-    def find_optimal_response(self, player, demand_of_others):
+    def calc_reference_load_of_others(self, p):
+        L = np.zeros(self._schedule_length)
+        for i in range(self._schedule_length):
+            for other in self._players:
+                if other == p:
+                    continue
+                L[i] += self.__demand[other][i+self._start_index]
+        return L
+
+    def calc_costs_for_all(self):
+        L = self.create_empty_arrays()
+        for p in self._players:
+            L[p] = self.calc_current_load_of_others(p)
+
+        L_ref = self.create_empty_arrays()
+        for p in self._players:
+            L_ref[p] = self.calc_reference_load_of_others(p)
+
+        costs = dict()
+        costs_ref = dict()
+        for p in self._players:
+            costs[p] = 0
+            costs_ref[p] = 0
+            for i in range(self._schedule_length):
+                total_load = self.__demand[p][i+self._start_index] + L[p][i] + self.__schedules[p][i]
+                total_load_ref = self.__demand[p][i+self._start_index] + L_ref[p][i]
+
+                costs[p] += self._pricing_parameter[2] * total_load**2 + \
+                         self._pricing_parameter[1] * total_load + \
+                         self._pricing_parameter[0]
+                costs_ref[p] += self._pricing_parameter[2] * total_load_ref**2 + \
+                             self._pricing_parameter[1] * total_load_ref + \
+                             self._pricing_parameter[0]
+            costs[p] = int(costs[p])
+            costs_ref[p] = int(costs_ref[p])
+
+        return costs, costs_ref
+
+    # TODO: this is the key function!
+    def find_optimal_response(self, p, L):
         return np.zeros(self._schedule_length)
 
     def check_for_convergence(self, solution):
@@ -168,6 +214,11 @@ class Game:
         val /= self._schedule_length
 
         return True if val < self._eps else False
+
+    def set_random_schedule(self):
+        for p in self._players:
+            for i in range(self._schedule_length):
+                self.__schedules[p][i] = random.randint(-10000, 10000)
 
     # getter
     def get_players(self):

@@ -1,8 +1,9 @@
 import time
 import argparse
+import pprint
 
 from src.game import Game
-from src.postprocessing import plot_all
+from src.postprocessing import plot_all, calc_savings
 
 
 def parse_args():
@@ -29,7 +30,9 @@ def main():
 
     if args.write:
         # output to files
-        pass
+        costs, costs_ref = game.calc_costs_for_all()
+        pprint.pprint(costs, costs_ref)
+        pprint.pprint(calc_savings(costs, costs_ref))
 
 
 if __name__ == '__main__':
