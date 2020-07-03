@@ -4,7 +4,7 @@ import yaml
 import pandas as pd
 import numpy as np
 import random
-from scipy.optimize import minimize, LinearConstraint
+from scipy.optimize import minimize, LinearConstraint, Bounds
 
 
 class Game:
@@ -85,6 +85,7 @@ class Game:
         assert self._num_players == self.__demand.shape[1]-1, "number of players should match number of columns in file!"
         flag_pricing_parameter = (self._pricing_parameter[1] != 0.0 or self._pricing_parameter[2] != 0.0)
         assert flag_pricing_parameter, "at least one of the cost-coefficients needs to be different from zero!"
+        assert self._pricing_parameter[0] == 0, "current implementation assumes zero constant term!"
         assert (self._start_date == self.__demand['date']).any(), "start date needs to be within data range"
         assert (self._end_date == self.__demand['date']).any(), "end date needs to be within data range"
         assert self._storage_rate > 0, "storage rate needs to be larger than zero"
@@ -198,11 +199,9 @@ class Game:
                 total_load_ref = self.__demand[p][i+self._start_index] + L_ref[p][i]
 
                 total_price = self._pricing_parameter[2] * total_load**2 + \
-                              self._pricing_parameter[1] * total_load + \
-                              self._pricing_parameter[0]
+                              self._pricing_parameter[1] * total_load
                 total_price_ref = self._pricing_parameter[2] * total_load_ref**2 + \
-                                  self._pricing_parameter[1] * total_load_ref + \
-                                  self._pricing_parameter[0]
+                                  self._pricing_parameter[1] * total_load_ref
 
                 costs[p] += (self.__demand[p][i+self._start_index] + self.__schedules[p][i])*total_price
                 costs_ref[p] += self.__demand[p][i+self._start_index] * total_price_ref
@@ -215,30 +214,77 @@ class Game:
         costs = 0
         for i in range(self._schedule_length):
             price = self._pricing_parameter[2] * (self._load_other_players[i] + self._demand_current_player[i] + x[i])**2 + \
-                    self._pricing_parameter[1] * (self._load_other_players[i] + self._demand_current_player[i] + x[i]) + \
-                    self._pricing_parameter[0]
+                    self._pricing_parameter[1] * (self._load_other_players[i] + self._demand_current_player[i] + x[i])
             costs += (price * (self._demand_current_player[i] + x[i]))
-            # costs += price
         return costs
 
-    # TODO: this is the key function!
+    def new_objective(self, x):
+        costs = 0
+        a = self._pricing_parameter[2]
+        b = self._pricing_parameter[1]
+
+        for i in range(self._schedule_length):
+            d = self._demand_current_player[i]
+            L = self._load_other_players[i]
+
+            costs_i = a*d**3 + 2*a*d**2*L + 3*a*d**2*x[i] + a*d*L**2 + 4*a*d*L*x[i] + 3*a*d*x[i]**2 + \
+                a*L**2*x[i] + 2*a*L*x[i]**2 + a*x[i]**3 + b*d**2 + b*d*L + 2*b*d*x[i] + b*L*x[i] + b*x[i]**2
+
+            costs += costs_i
+        return costs
+
+    def new_objective_der(self, x):
+        a = self._pricing_parameter[2]
+        b = self._pricing_parameter[1]
+        der = np.zeros_like(x)
+        for i in range(self._schedule_length):
+            d = self._demand_current_player[i]
+            L = self._load_other_players[i]
+
+            der[i] = a*((d+x[i])+L)**2 + 2*a*(d+x[i])*(d+x[i]+L) + b*(d+L+x[i]) + b*(d+x[i])
+        return der
+
+    def new_objective_hess(self, x):
+        a = self._pricing_parameter[2]
+        b = self._pricing_parameter[1]
+        hess = np.zeros((self._schedule_length, self._schedule_length))
+        for i in range(self._schedule_length):
+            d = self._demand_current_player[i]
+            L = self._load_other_players[i]
+
+            hess[i][i] = 2*(a*(3*d + 2*L + 3*x[i]) + b)
+        return hess
+
     def find_optimal_response(self, p):
 
         x_0 = self.__schedules[p]
 
         lb = np.zeros(self._schedule_length)
-        A = np.eye(self._schedule_length)
+        A = 1.0 * np.eye(self._schedule_length)
         for i in range(self._schedule_length):
             for j in range(self._schedule_length):
                 if j < i:
-                    A[i][j] = -1
+                    A[i][j] = 1
 
         ub = np.empty(self._schedule_length)
         ub.fill(np.inf)
+        # cons = {'type': 'ineq', 'fun': lambda x: -(A @ x - lb)}
+        linear_constraint = LinearConstraint(A, lb, ub)
 
-        cons = {'type': 'ineq', 'fun': lambda x: -(A @ x - lb)}
+        bounds = Bounds(-1.0*self._demand_current_player, np.ones(self._schedule_length)*self._storage_rate)
 
-        res = minimize(self.objective, x_0, method='SLSQP', constraints=cons)
+        if self._debug_flag:
+            options = {'disp':True, 'xtol':self._eps}
+        else:
+            options = {'xtol':self._eps}
+        res = minimize(fun = self.new_objective,
+                       x0 = x_0,
+                       method = 'trust-constr',
+                       jac = self.new_objective_der,
+                       hess = self.new_objective_hess,
+                       constraints = linear_constraint,
+                       bounds = bounds,
+                       options = options)
         return res.x
 
     def check_for_convergence(self, solution):
