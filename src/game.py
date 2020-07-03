@@ -127,7 +127,7 @@ class Game:
         end = start + self._max_time
 
         # initialise random schedules
-        self.set_random_schedule()
+        # self.set_random_schedule()
 
         num_iterations = 0
         flag_convergence = False
@@ -141,12 +141,17 @@ class Game:
                 self.update_variables(p)
                 self.__schedules[p] = self.find_optimal_response(p)
 
-            flag_convergence = self.check_for_convergence(solution_profile)
+            flag_convergence, achieved_eps = self.check_for_convergence(solution_profile)
             flag_time_is_up = True if time.time() > end else False
             num_iterations += 1
 
+            if self._debug_flag:
+                print("")
+                print("*** finished iteration number {} with eps = {}".format(num_iterations, achieved_eps))
+                print("###############################################")
+
         if self._debug_flag:
-            print("number of iterations: {}".format(num_iterations))
+            print("total number of iterations: {}".format(num_iterations))
             print("execution time for solver: {:.3f}s".format(time.time()-start))
 
         return flag_convergence
@@ -274,9 +279,9 @@ class Game:
         bounds = Bounds(-1.0*self._demand_current_player, np.ones(self._schedule_length)*self._storage_rate)
 
         if self._debug_flag:
-            options = {'disp':True, 'xtol':self._eps}
+            options = {'disp': True, 'xtol': 0.000001}
         else:
-            options = {'xtol':self._eps}
+            options = {'xtol': 0.000001}
         res = minimize(fun = self.new_objective,
                        x0 = x_0,
                        method = 'trust-constr',
@@ -296,7 +301,8 @@ class Game:
         val = np.sqrt(val)
         val /= self._schedule_length
 
-        return True if val < self._eps else False
+        result_flag = True if val < self._eps else False
+        return result_flag, val
 
     def set_random_schedule(self):
         for p in self._players:

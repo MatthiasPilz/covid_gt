@@ -29,10 +29,17 @@ def main():
         plot_all(game.get_players(), game.get_demand(), game.get_schedules(), game.get_dates())
 
     if args.write:
-        # output to files
+        # output some stats to terminal
         costs, costs_ref = game.calc_costs_for_all()
-        pprint.pprint([costs, costs_ref])
+        print("reference costs:")
+        pprint.pprint(costs_ref)
+        print("costs with game:")
+        pprint.pprint(costs)
+        print("resulting savings")
         pprint.pprint(calc_savings(costs, costs_ref, game.get_players()))
+
+        # output to file
+
 
 
 if __name__ == '__main__':

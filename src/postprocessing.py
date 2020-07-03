@@ -51,7 +51,7 @@ def plot_storage(p, s, t):
     # fill storage with values from s
     for player in p:
         for i in range(1, len(t)):
-            storage[player][i] = storage[player][i-1] + s[player][i]
+            storage[player][i] = storage[player][i-1] + s[player][i-1]
 
     # plot
     fig, ax = plt.subplots()
