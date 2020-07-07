@@ -4,6 +4,7 @@ import yaml
 import pandas as pd
 import numpy as np
 import random
+import os
 from scipy.optimize import minimize, LinearConstraint, Bounds
 
 
@@ -16,6 +17,8 @@ class Game:
         self._schedule_length = int(params['schedule-length'])
         self._start_date = datetime.datetime.strptime(params['start-date'], '%d/%m/%Y')
         self._end_date = self._start_date + datetime.timedelta(days=self._schedule_length)
+        self._output_location = params['output-dir'] + params['simulation-name']
+        self.create_output_dir()
 
         dateparse = lambda x: datetime.datetime.strptime(x, '%d/%m/%Y')
         self.__demand = pd.read_csv(params['demand-file'],
@@ -49,9 +52,6 @@ class Game:
         self._max_iter = params['max-iter']
         self._max_time = params['max-time']
 
-        if self.debug_state():
-            self.check_initialisation()
-
         # more fields for eventual computations
         self._players = self.determine_players()
         self.__schedules = self.create_empty_arrays()
@@ -70,7 +70,11 @@ class Game:
         # compute forecasted values:
         self.__fc_demand = self.__demand.copy()
         self._forecast_error = float(params['forecast-error'])
-        self.compute_forecast_demand()
+        if self._forecast_error != 0.0:
+            self.compute_forecast_demand()
+
+        if self.debug_state():
+            self.check_initialisation()
 
     @staticmethod
     def read_parameters(config_file):
@@ -83,14 +87,22 @@ class Game:
             print('*** Error reading the config file - ' + str(e))
         return params
 
+    def create_output_dir(self):
+        try:
+            os.makedirs(self._output_location)
+            print("Directory ", self._output_location, " Created ")
+        except FileExistsError:
+            print("Directory ",self._output_location, " already exists")
+
     def compute_forecast_demand(self):
         for player in self._players:
             mean = np.mean(self.__fc_demand[player])
             error_mean = self._forecast_error * mean
-            error_stdv = error_mean / 4.0
+            error_stdv = error_mean
 
             for i in range(len(self.__fc_demand[player])):
                 self.__fc_demand[player][i] -= np.random.normal(error_mean, error_stdv)
+            self.__fc_demand[player] = np.where(self.__fc_demand[player] < 0, 0, self.__fc_demand[player])
 
     def apply_error(self, a):
         mean = np.mean(a)
@@ -341,11 +353,11 @@ class Game:
                 # check only when using the stored PPE
                 cur_decision = self.__schedules[p][i]
                 if cur_decision < 0:
-                    temp = np.minimum(storage[p][i], self.__demand[p][i])
-                    if np.absolute(cur_decision) > temp:
+                    temp = np.minimum(storage[p][i], self.__demand[p][i+self._start_index])
+                    if abs(cur_decision) > temp:
                         cur_decision = -temp
 
-                storage[p][i] += cur_decision
+                storage[p][i+1] += storage[p][i] + cur_decision
                 new_schedules[p][i] = cur_decision
 
         self.__schedules = new_schedules
@@ -376,4 +388,7 @@ class Game:
         for i in range(self._schedule_length):
             dates.append(self.__demand['date'][i + self._start_index].strftime("%d/%m"))
         return dates
+
+    def get_output_location(self):
+        return self._output_location
 

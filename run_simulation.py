@@ -39,7 +39,12 @@ def main():
         pprint.pprint(calc_savings(costs, costs_ref, game.get_players()))
 
         # output to file
-        output_files(game.get_dates(), game.get_players(), game.get_demand(), game.get_schedules(), game.get_fc_demand())
+        output_files(game.get_dates(),
+                     game.get_players(),
+                     game.get_demand(),
+                     game.get_schedules(),
+                     game.get_fc_demand(),
+                     game.get_output_location())
 
 
 if __name__ == '__main__':

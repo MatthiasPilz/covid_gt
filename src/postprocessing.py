@@ -45,23 +45,24 @@ def plot_schedules(p, s, t):
 
 def plot_storage(p, s, t):
     # adding final element to t
-    t.append('final')
+    time = t.copy()
+    time.append('final')
 
     # empty storage
     storage = dict()
     for player in p:
-        temp = np.zeros(len(t), dtype=np.int32)
+        temp = np.zeros(len(time), dtype=np.int32)
         storage[player] = temp
 
     # fill storage with values from s
     for player in p:
-        for i in range(1, len(t)):
+        for i in range(1, len(time)):
             storage[player][i] = storage[player][i-1] + s[player][i-1]
 
     # plot
     fig, ax = plt.subplots()
     for player in p:
-        ax.plot(t, storage[player])
+        ax.plot(time, storage[player])
     plt.xticks(rotation=45, ha='right')
     plt.title("stored PPE")
     plt.legend(p)
@@ -74,22 +75,23 @@ def plot_forecasted_values(p, d, fc_d, t):
     for player in p:
         ax.plot(t, d[player])
         ax.plot(t, fc_d[player])
-        if player == 'london':
-            break
     plt.xticks(rotation=45, ha='right')
     plt.title("forecasted demand")
-    plt.legend(p)
+    plt.legend([p, p])
     plt.show()
 
 
 def calc_savings(costs, ref, p):
     savings = dict()
     for player in p:
-        savings[player] = (1 - (costs[player] / ref[player]))*100
+        if ref[player] == 0:
+            savings[player] = 0
+        else:
+            savings[player] = (1 - (costs[player] / ref[player]))*100
     return savings
 
 
-def output_files(t, p, d, s, fc_d):
+def output_files(t, p, d, s, fc_d, loc):
     agg = np.zeros(len(t))
     for player in p:
         for i in range(len(t)):
@@ -101,13 +103,13 @@ def output_files(t, p, d, s, fc_d):
             ref[i] += d[player][i]
 
     demand_agg = [t, ref, agg]
-    df = pd.DataFrame(demand_agg)
-    df.to_csv('./results/demand_agg.csv')
+    df = pd.DataFrame(demand_agg).T
+    df.to_csv(loc + 'demand_agg.csv')
 
     fc_demands = fc_d
     df = pd.DataFrame(fc_demands)
-    df.to_csv('./results/forecasted_demand.csv')
+    df.to_csv(loc + 'forecasted_demand.csv')
 
     schedules = s
     df = pd.DataFrame(schedules)
-    df.to_csv('./results/schedules.csv')
+    df.to_csv(loc + 'schedules.csv')
