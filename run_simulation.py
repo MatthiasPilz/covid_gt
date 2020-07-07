@@ -3,7 +3,7 @@ import argparse
 import pprint
 
 from src.game import Game
-from src.postprocessing import plot_all, calc_savings
+from src.postprocessing import plot_all, calc_savings, output_files
 
 
 def parse_args():
@@ -26,7 +26,7 @@ def main():
 
     if args.plot:
         # plotting
-        plot_all(game.get_players(), game.get_demand(), game.get_schedules(), game.get_dates())
+        plot_all(game.get_players(), game.get_demand(), game.get_schedules(), game.get_dates(), game.get_fc_demand())
 
     if args.write:
         # output some stats to terminal
@@ -39,10 +39,9 @@ def main():
         pprint.pprint(calc_savings(costs, costs_ref, game.get_players()))
 
         # output to file
-
+        output_files(game.get_dates(), game.get_players(), game.get_demand(), game.get_schedules(), game.get_fc_demand())
 
 
 if __name__ == '__main__':
     main()
-
     exit(0)
