@@ -4,12 +4,10 @@ debug-flag: True
 
 # general
 num-players: 7
-schedule-length: 280
+schedule-length: 10
 start-date: '23/03/2020'
-output-dir: './results/'
 demand-file: './data/covid_allDemand.csv'
 forecast-error: 0.7
-simulation-name: 'with_large_forecasting_error/'
 
 
 # pricing
@@ -30,5 +28,5 @@ min-capacity: 0
 # iteration
 max-time: 1300
 max-iter: 10000
-eps: 1
+eps: 100
 

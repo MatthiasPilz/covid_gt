@@ -17,8 +17,6 @@ class Game:
         self._schedule_length = int(params['schedule-length'])
         self._start_date = datetime.datetime.strptime(params['start-date'], '%d/%m/%Y')
         self._end_date = self._start_date + datetime.timedelta(days=self._schedule_length)
-        self._output_location = params['output-dir'] + params['simulation-name']
-        self.create_output_dir()
 
         dateparse = lambda x: datetime.datetime.strptime(x, '%d/%m/%Y')
         self.__demand = pd.read_csv(params['demand-file'],
@@ -86,13 +84,6 @@ class Game:
         except Exception as e:
             print('*** Error reading the config file - ' + str(e))
         return params
-
-    def create_output_dir(self):
-        try:
-            os.makedirs(self._output_location)
-            print("Directory ", self._output_location, " Created ")
-        except FileExistsError:
-            print("Directory ",self._output_location, " already exists")
 
     def compute_forecast_demand(self):
         for player in self._players:
@@ -388,7 +379,4 @@ class Game:
         for i in range(self._schedule_length):
             dates.append(self.__demand['date'][i + self._start_index].strftime("%d/%m"))
         return dates
-
-    def get_output_location(self):
-        return self._output_location
 
