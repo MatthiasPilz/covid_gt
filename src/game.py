@@ -291,8 +291,8 @@ class Game:
 
         x_0 = self.__schedules[p]
 
-        lb = np.zeros(self._schedule_length)
-        lb[0] = -self._initial_state_current_player
+        lb = np.empty(self._schedule_length)
+        lb.fill(-self._initial_state_current_player)
         A = 1.0 * np.eye(self._schedule_length)
         for i in range(self._schedule_length):
             for j in range(self._schedule_length):

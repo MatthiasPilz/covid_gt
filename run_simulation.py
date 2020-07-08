@@ -65,7 +65,7 @@ def update_initial_storage(schedules, players, params):
         for j in range(len(schedules[p])):
             initial_state += schedules[p][j]
 
-        params['initial-state'][i] = initial_state
+        params['initial-state'][i] = int(initial_state)
     return params
 
 
