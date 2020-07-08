@@ -91,7 +91,7 @@ def calc_savings(costs, ref, p):
     return savings
 
 
-def output_files(t, p, d, s, fc_d, loc):
+def output_files(t, p, d, s, fc_d, loc, repeat_counter=0):
     agg = np.zeros(len(t))
     for player in p:
         for i in range(len(t)):
@@ -102,14 +102,30 @@ def output_files(t, p, d, s, fc_d, loc):
         for i in range(len(t)):
             ref[i] += d[player][i]
 
-    demand_agg = [t, ref, agg]
-    df = pd.DataFrame(demand_agg).T
-    df.to_csv(loc + 'demand_agg.csv')
+    if repeat_counter == 0:
+        demand_agg = [t, ref, agg]
+        df = pd.DataFrame(demand_agg).T
+        df.columns = ["time", "reference", "game"]
+        df.to_csv(loc + 'load_agg.csv')
 
-    fc_demands = fc_d
-    df = pd.DataFrame(fc_demands)
-    df.to_csv(loc + 'forecasted_demand.csv')
+        fc_demands = fc_d
+        df = pd.DataFrame(fc_demands)
+        df.to_csv(loc + 'forecasted_demand.csv')
 
-    schedules = s
-    df = pd.DataFrame(schedules)
-    df.to_csv(loc + 'schedules.csv')
+        schedules = s
+        df = pd.DataFrame(schedules)
+        df.to_csv(loc + 'schedules.csv')
+    else:
+        demand_agg = [t, ref, agg]
+        df = pd.DataFrame(demand_agg).T
+        df.columns = ["time", "reference", "game"]
+        df.to_csv(loc + 'load_agg.csv', mode='a', header=False)
+
+        fc_demands = fc_d
+        df = pd.DataFrame(fc_demands)
+        df.to_csv(loc + 'forecasted_demand.csv', mode='a', header=False)
+
+        schedules = s
+        df = pd.DataFrame(schedules)
+        df.to_csv(loc + 'schedules.csv', mode='a', header=False)
+

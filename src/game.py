@@ -17,8 +17,6 @@ class Game:
         self._schedule_length = int(params['schedule-length'])
         self._start_date = datetime.datetime.strptime(params['start-date'], '%d/%m/%Y')
         self._end_date = self._start_date + datetime.timedelta(days=self._schedule_length)
-        self._output_location = params['output-dir'] + params['simulation-name']
-        self.create_output_dir()
 
         dateparse = lambda x: datetime.datetime.strptime(x, '%d/%m/%Y')
         self.__demand = pd.read_csv(params['demand-file'],
@@ -43,9 +41,11 @@ class Game:
         # storage
         self._storage_rate = params['storage-rate']
         self._usage_rate = params['usage-rate']
-        self._initial_state = params['initial-state']
         self._max_capacity = params['max-capacity']
         self._min_capacity = params['min-capacity']
+        self._initial_states = []
+        for i in range(self._num_players):
+            self._initial_states.append(params['initial-state'][i])
 
         # iteration
         self._eps = params['eps']
@@ -66,6 +66,7 @@ class Game:
             self._L[p] = self.calc_current_load_of_others(p)
         self._fc_demand_current_player = np.zeros(self._schedule_length)
         self._load_other_players = np.zeros(self._schedule_length)
+        self._initial_state_current_player = self._initial_states[0]
 
         # compute forecasted values:
         self.__fc_demand = self.__demand.copy()
@@ -86,13 +87,6 @@ class Game:
         except Exception as e:
             print('*** Error reading the config file - ' + str(e))
         return params
-
-    def create_output_dir(self):
-        try:
-            os.makedirs(self._output_location)
-            print("Directory ", self._output_location, " Created ")
-        except FileExistsError:
-            print("Directory ",self._output_location, " already exists")
 
     def compute_forecast_demand(self):
         for player in self._players:
@@ -127,7 +121,10 @@ class Game:
         assert self._usage_rate < 0, "usage rate needs to be smaller than zero"
         assert self._max_capacity >= 0, "max capacity needs to be larger than zero"
         assert self._min_capacity >= 0, "min capacity needs to be non-negative"
-        flag_initial_state = self._min_capacity <= self._initial_state <= self._max_capacity
+        flag_initial_state = True
+        for i in range(self._num_players):
+            flag_cur = self._min_capacity <= self._initial_states[i] <= self._max_capacity
+            flag_initial_state = flag_initial_state and flag_cur
         assert flag_initial_state, "initial state not within the storage limits"
         assert self._max_time > 0, "iteration time needs to be larger than zero"
         assert self._max_iter >= 1, "need to perform at least one iteration"
@@ -196,6 +193,7 @@ class Game:
     def update_variables(self, p):
         self._fc_demand_current_player = self.get_fc_demand()[p]
         self._load_other_players = self.calc_current_load_of_others(p)
+        self._initial_state_current_player = self.get_initial_state(p)
 
     def copy_schedules_to_solution(self):
         solution = self.create_empty_arrays()
@@ -293,7 +291,8 @@ class Game:
 
         x_0 = self.__schedules[p]
 
-        lb = np.zeros(self._schedule_length)
+        lb = np.empty(self._schedule_length)
+        lb.fill(-self._initial_state_current_player)
         A = 1.0 * np.eye(self._schedule_length)
         for i in range(self._schedule_length):
             for j in range(self._schedule_length):
@@ -343,9 +342,9 @@ class Game:
         storage = self.create_empty_arrays()
         new_schedules = self.create_empty_arrays()
 
-        for p in self._players:
+        for k, p in enumerate(self._players):
             # sort out initial state and extend by one to evaluate final storage state
-            storage[p][0] = self._initial_state
+            storage[p][0] = self._initial_states[k]
             storage[p] = np.append(storage[p], 0)
 
             for i in range(self._schedule_length):
@@ -389,6 +388,8 @@ class Game:
             dates.append(self.__demand['date'][i + self._start_index].strftime("%d/%m"))
         return dates
 
-    def get_output_location(self):
-        return self._output_location
+    def get_initial_state(self, p):
+        for (i, player) in enumerate(self._players):
+            if p == player:
+                return self._initial_states[i]
 
