@@ -39,7 +39,7 @@ def copy_config_to_output_dir(config_file, output_loc):
     return file_name
 
 
-def update_config_file(config_file, output_loc, repeat_counter):
+def update_config_file(config_file, output_loc, repeat_counter, schedules, players):
     with open(config_file) as f:
         params = yaml.load(f, Loader=yaml.SafeLoader)
 
@@ -50,11 +50,23 @@ def update_config_file(config_file, output_loc, repeat_counter):
     new_start_date = old_start_date + datetime.timedelta(days=shift)
     params['start-date'] = new_start_date.strftime('%d/%m/%Y')
 
+    params = update_initial_storage(schedules, players, params)
+
     file_name = output_loc + "parameter_file" + str(repeat_counter) + ".yaml"
     with open(file_name, "w") as f:
         yaml.dump(params, f, Dumper=yaml.SafeDumper, default_flow_style=False)
 
     return file_name
+
+
+def update_initial_storage(schedules, players, params):
+    for (i, p) in enumerate(players):
+        initial_state = params['initial-state'][i]
+        for j in range(len(schedules[p])):
+            initial_state += schedules[p][j]
+
+        params['initial-state'][i] = initial_state
+    return params
 
 
 def main():
@@ -94,7 +106,11 @@ def main():
                          i)
 
             if i < int(args.repeat)-1:
-                config_file = update_config_file(config_file, output_loc, i)
+                config_file = update_config_file(config_file,
+                                                 output_loc,
+                                                 i+1,
+                                                 game.get_schedules(),
+                                                 game.get_players())
 
 
 if __name__ == '__main__':
