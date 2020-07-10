@@ -1,0 +1,32 @@
+# config file containing simulation parameters
+
+debug-flag: True
+
+# general
+num-players: 7
+schedule-length: 10
+start-date: '23/03/2020'
+demand-file: './data/covid_allDemand.csv'
+storage-file: './config/storage_details.csv'
+forecast-error: 0.7
+players:
+  0: 'east'
+  1: 'london'
+  2: 'midlands'
+  3: 'north_east'
+  4: 'north_west'
+  5: 'south_east'
+  6: 'south_west'
+
+# pricing
+pricing-coeff:
+  0: 0.0
+  1: 1.0
+  2: 1.0
+
+# iteration
+max-time: 1300
+max-iter-game: 20
+max-iter-opt: 1000
+eps: 100
+

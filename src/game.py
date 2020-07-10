@@ -1,57 +1,23 @@
-import datetime
 import time
-import yaml
-import pandas as pd
 import numpy as np
 import random
-import os
+from .player import Player
+from .config import Config
 from scipy.optimize import minimize, LinearConstraint, Bounds
 
 
 class Game:
     def __init__(self, config_file):
-        params = self.read_parameters(config_file)
-        # general
-        self._debug_flag = params['debug-flag']
-        self._num_players = int(params['num-players'])
-        self._schedule_length = int(params['schedule-length'])
-        self._start_date = datetime.datetime.strptime(params['start-date'], '%d/%m/%Y')
-        self._end_date = self._start_date + datetime.timedelta(days=self._schedule_length)
+        self.config = Config(config_file)
 
-        dateparse = lambda x: datetime.datetime.strptime(x, '%d/%m/%Y')
-        self.__demand = pd.read_csv(params['demand-file'],
-                                    sep = ',',
-                                    skipinitialspace = True,
-                                    dtype={'east': np.int32,
-                                           'london': np.int32,
-                                           'midlands': np.int32,
-                                           'north_east': np.int32,
-                                           'north_west': np.int32,
-                                           'south_east': np.int32,
-                                           'south_west': np.int32, },
-                                    parse_dates=['date'],
-                                    date_parser=dateparse)
+        player_names = self.config.get_player_names()
+        demand_file = self.config.get_demand_file()
+        storage_file = self.config.get_storage_file()
+        self.players = dict()
+        for name in player_names:
+            self.players[name] = Player(name, demand_file, storage_file)
 
-        # pricing
-        self._pricing_parameter = []
-        self._pricing_parameter.append(params['pricing-coeff'][0])
-        self._pricing_parameter.append(params['pricing-coeff'][1])
-        self._pricing_parameter.append(params['pricing-coeff'][2])
-
-        # storage
-        self._storage_rate = params['storage-rate']
-        self._usage_rate = params['usage-rate']
-        self._max_capacity = params['max-capacity']
-        self._min_capacity = params['min-capacity']
-        self._initial_states = []
-        for i in range(self._num_players):
-            self._initial_states.append(params['initial-state'][i])
-
-        # iteration
-        self._eps = params['eps']
-        self._max_iter = params['max-iter']
-        self._max_time = params['max-time']
-
+    '''
         # more fields for eventual computations
         self._players = self.determine_players()
         self.__schedules = self.create_empty_arrays()
@@ -76,17 +42,6 @@ class Game:
 
         if self.debug_state():
             self.check_initialisation()
-
-    @staticmethod
-    def read_parameters(config_file):
-        params = {}
-        try:
-            with open(config_file, 'r') as file:
-                # all the parameters from the config file
-                params = yaml.load(file, Loader=yaml.SafeLoader)
-        except Exception as e:
-            print('*** Error reading the config file - ' + str(e))
-        return params
 
     def compute_forecast_demand(self):
         for player in self._players:
@@ -128,6 +83,7 @@ class Game:
         assert flag_initial_state, "initial state not within the storage limits"
         assert self._max_time > 0, "iteration time needs to be larger than zero"
         assert self._max_iter >= 1, "need to perform at least one iteration"
+    '''
 
     def display(self):
         """Display Configuration values."""
@@ -138,6 +94,11 @@ class Game:
                     print("{:30} {}".format(a, getattr(self, a)))
         print("\n")
 
+        for name in self.config.get_player_names():
+            self.players[name].display()
+
+
+    '''
     def determine_players(self):
         players = list(self.__demand.columns)
         players.pop(0)
@@ -392,4 +353,4 @@ class Game:
         for (i, player) in enumerate(self._players):
             if p == player:
                 return self._initial_states[i]
-
+    '''
