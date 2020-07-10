@@ -10,11 +10,11 @@ from src.postprocessing import plot_all, calc_savings, output_files
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--config",      "-c", required=True, help="config file location")
-    parser.add_argument("--output", "-o", required=True, help="output location within results folder")
-    parser.add_argument("--plot", "-p", help="flag for instant plotting", action='store_true')
-    parser.add_argument("--write", "-w", help="flag for writing output to files", action='store_true')
-    parser.add_argument("--repeat", "-r", help="the number of repetitions of the game", default=1)
+    parser.add_argument("--config",     "-c", required=True, help="config file location")
+    parser.add_argument("--output",     "-o", required=True, help="output location within results folder")
+    parser.add_argument("--plot",       "-p", help="flag for instant plotting", action='store_true')
+    parser.add_argument("--write",      "-w", help="flag for writing output to files", action='store_true')
+    parser.add_argument("--repeat",     "-r", help="the number of repetitions of the game", default=1)
 
     return parser.parse_args()
 
