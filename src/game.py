@@ -13,77 +13,18 @@ class Game:
         player_names = self.config.get_player_names()
         demand_file = self.config.get_demand_file()
         storage_file = self.config.get_storage_file()
+        start_date = self.config.get_start_date()
+        game_length = self.config.get_schedule_length()
         self.players = dict()
         for name in player_names:
-            self.players[name] = Player(name, demand_file, storage_file)
+            self.players[name] = Player(name, demand_file, storage_file, start_date, game_length)
 
-    '''
-        # more fields for eventual computations
-        self._players = self.determine_players()
-        self.__schedules = self.create_empty_arrays()
+        # derived variables:
+        self.schedules = self.create_empty_int_arrays()
+        self.L = self.create_empty_int_arrays()
 
-        # derive index from dates..
-        self._start_index = self.get_start_index()
-        self._end_index = self._start_index + self._schedule_length
-        assert self.__demand['date'][self._end_index] == self._end_date, "end date and index don't match"
-
-        self._L = self.create_empty_arrays()
-        for p in self._players:
-            self._L[p] = self.calc_current_load_of_others(p)
-        self._fc_demand_current_player = np.zeros(self._schedule_length)
-        self._load_other_players = np.zeros(self._schedule_length)
-        self._initial_state_current_player = self._initial_states[0]
-
-        # compute forecasted values:
-        self.__fc_demand = self.__demand.copy()
-        self._forecast_error = float(params['forecast-error'])
-        if self._forecast_error != 0.0:
-            self.compute_forecast_demand()
-
-        if self.debug_state():
-            self.check_initialisation()
-
-    def compute_forecast_demand(self):
-        for player in self._players:
-            mean = np.mean(self.__fc_demand[player])
-            error_mean = self._forecast_error * mean
-            error_stdv = error_mean
-
-            for i in range(len(self.__fc_demand[player])):
-                self.__fc_demand[player][i] -= np.random.normal(error_mean, error_stdv)
-            self.__fc_demand[player] = np.where(self.__fc_demand[player] < 0, 0, self.__fc_demand[player])
-
-    def apply_error(self, a):
-        mean = np.mean(a)
-        error_mean = self._forecast_error * mean
-        error_stdv = error_mean / 4.0
-
-        for i in range(len(a)):
-            a[i] = a[i] - np.random.normal(error_mean, error_stdv)
-        return a
-
-    def debug_state(self):
-        return self._debug_flag
-
-    def check_initialisation(self):
-        assert self._num_players == self.__demand.shape[1]-1, "number of players should match number of columns in file!"
-        flag_pricing_parameter = (self._pricing_parameter[1] != 0.0 or self._pricing_parameter[2] != 0.0)
-        assert flag_pricing_parameter, "at least one of the cost-coefficients needs to be different from zero!"
-        assert self._pricing_parameter[0] == 0, "current implementation assumes zero constant term!"
-        assert (self._start_date == self.__demand['date']).any(), "start date needs to be within data range"
-        assert (self._end_date == self.__demand['date']).any(), "end date needs to be within data range"
-        assert self._storage_rate > 0, "storage rate needs to be larger than zero"
-        assert self._usage_rate < 0, "usage rate needs to be smaller than zero"
-        assert self._max_capacity >= 0, "max capacity needs to be larger than zero"
-        assert self._min_capacity >= 0, "min capacity needs to be non-negative"
-        flag_initial_state = True
-        for i in range(self._num_players):
-            flag_cur = self._min_capacity <= self._initial_states[i] <= self._max_capacity
-            flag_initial_state = flag_initial_state and flag_cur
-        assert flag_initial_state, "initial state not within the storage limits"
-        assert self._max_time > 0, "iteration time needs to be larger than zero"
-        assert self._max_iter >= 1, "need to perform at least one iteration"
-    '''
+        forecast_error = self.config.get_forecast_error()
+        self.forecast_demand = self.compute_forecast_demand(forecast_error)
 
     def display(self):
         """Display Configuration values."""
@@ -97,127 +38,80 @@ class Game:
         for name in self.config.get_player_names():
             self.players[name].display()
 
+    def create_empty_int_arrays(self):
+        temp = dict()
+        for p in self.players.keys():
+            s = np.zeros(self.config.get_schedule_length(), dtype=np.int32)
+            temp[p] = s
+        return temp
 
-    '''
-    def determine_players(self):
-        players = list(self.__demand.columns)
-        players.pop(0)
-        return players
+    def compute_forecast_demand(self, forecast_error):
+        temp = self.create_empty_int_arrays()
 
-    def create_empty_arrays(self):
-        schedules = dict()
-        for p in self._players:
-            s = np.zeros(self._schedule_length, dtype=np.int32)
-            schedules[p] = s
-        return schedules
+        for p in self.players.keys():
+            # the chosen factor for the stdv is completely arbitrary
+            mean = np.mean(self.players[p].get_game_demand())
+            error_mean = forecast_error * mean
+            error_stdv = error_mean * 0.33
 
-    def get_start_index(self):
-        temp = self.__demand['date'].isin([self._start_date]).to_list()
-        return temp.index(True)
+            for i in range(self.config.get_schedule_length()):
+                temp[p] = self.players[p].get_game_demand()[i] - int(np.random.normal(error_mean, error_stdv))
+            # set negative values to 0
+            temp[p] = np.where(temp[p] < 0, 0, temp[p])
+        return temp
 
     def solve_game(self):
-        start = time.time()
-        end = start + self._max_time
-
-        # initialise random schedules
-        # self.set_random_schedule()
+        start_time = time.time()
+        end_time = start_time + self.config.get_max_game_time()
 
         num_iterations = 0
         flag_convergence = False
         flag_time_is_up = False
 
-        while num_iterations < self._max_iter and not flag_convergence and not flag_time_is_up:
+        while num_iterations < self.config.get_max_game_iter() and not flag_convergence and not flag_time_is_up:
             solution_profile = self.copy_schedules_to_solution()
 
-            for p in self._players:
-                # TODO: need to make this function perform the optimisation
-                self.update_variables(p)
-                self.__schedules[p] = self.find_optimal_response(p)
+            for p in self.players.keys():
+                self.update_load_other_players(p)
+                self.schedules[p] = self.find_optimal_response(p)
 
             flag_convergence, achieved_eps = self.check_for_convergence(solution_profile)
-            flag_time_is_up = True if time.time() > end else False
+            flag_time_is_up = True if time.time() > end_time else False
             num_iterations += 1
 
-            if self._debug_flag:
-                print("")
-                print("*** finished iteration number {} with eps = {}".format(num_iterations, achieved_eps))
-                print("###############################################")
+            print("*** finished iteration number {} with eps = {}".format(num_iterations, achieved_eps))
+            print("###############################################")
+            print("")
 
-        if self._debug_flag:
-            print("total number of iterations: {}".format(num_iterations))
-            print("execution time for solver: {:.3f}s".format(time.time()-start))
+        print("total number of iterations: {}".format(num_iterations))
+        print("execution time for solver: {:.3f}s".format(time.time()-start_time))
 
         self.adjust_schedules_for_real_demand()
 
         return flag_convergence
 
-    def update_variables(self, p):
-        self._fc_demand_current_player = self.get_fc_demand()[p]
-        self._load_other_players = self.calc_current_load_of_others(p)
-        self._initial_state_current_player = self.get_initial_state(p)
+    def update_load_other_players(self, p):
+        self.L[p] = np.zeros(self.config.get_schedule_length())
+        for other in self.players.keys():
+            if other == p:
+                continue
+            for i in range(self.config.get_schedule_length()):
+                self.L[p][i] = self.players[p].get_game_demand()[i] + self.schedules[other][i]
 
     def copy_schedules_to_solution(self):
-        solution = self.create_empty_arrays()
-        for p in self._players:
-            for i in range(self._schedule_length):
-                solution[p][i] = self.__schedules[p][i]
-        return solution
-
-    def calc_current_load_of_others(self, p):
-        L = np.zeros(self._schedule_length)
-        for i in range(self._schedule_length):
-            for other in self._players:
-                if other == p:
-                    continue
-                L[i] += self.__demand[other][i+self._start_index] + self.__schedules[other][i]
-        return L
-
-    def calc_reference_load_of_others(self, p):
-        L = np.zeros(self._schedule_length)
-        for i in range(self._schedule_length):
-            for other in self._players:
-                if other == p:
-                    continue
-                L[i] += self.__demand[other][i+self._start_index]
-        return L
-
-    def calc_costs_for_all(self):
-        L = self.create_empty_arrays()
-        for p in self._players:
-            L[p] = self.calc_current_load_of_others(p)
-
-        L_ref = self.create_empty_arrays()
-        for p in self._players:
-            L_ref[p] = self.calc_reference_load_of_others(p)
-
-        costs = dict()
-        costs_ref = dict()
-        for p in self._players:
-            costs[p] = 0
-            costs_ref[p] = 0
-            for i in range(self._schedule_length):
-                total_load = self.__demand[p][i+self._start_index] + L[p][i] + self.__schedules[p][i]
-                total_load_ref = self.__demand[p][i+self._start_index] + L_ref[p][i]
-
-                total_price = self._pricing_parameter[2] * total_load**2 + \
-                              self._pricing_parameter[1] * total_load
-                total_price_ref = self._pricing_parameter[2] * total_load_ref**2 + \
-                                  self._pricing_parameter[1] * total_load_ref
-
-                costs[p] += (self.__demand[p][i+self._start_index] + self.__schedules[p][i])*total_price
-                costs_ref[p] += self.__demand[p][i+self._start_index] * total_price_ref
-            costs[p] = int(costs[p])
-            costs_ref[p] = int(costs_ref[p])
-
-        return costs, costs_ref
+        temp = self.create_empty_int_arrays()
+        for p in self.players.keys():
+            for i in range(self.config.get_schedule_length()):
+                temp[p][i] = self.schedules[p][i]
+        return temp
 
     def objective(self, x):
         costs = 0
-        a = self._pricing_parameter[2]
-        b = self._pricing_parameter[1]
+        a = self.config.get_pricing_parameters()[2]
+        b = self.config.get_pricing_parameters()[1]
 
-        for i in range(self._schedule_length):
-            d = self._fc_demand_current_player[i]
+        for i in range(self.config.get_schedule_length()):
+            d = self.forecast_demand[i]
             L = self._load_other_players[i]
 
             costs_i = a*d**3 + 2*a*d**2*L + 3*a*d**2*x[i] + a*d*L**2 + 4*a*d*L*x[i] + 3*a*d*x[i]**2 + \
@@ -353,4 +247,54 @@ class Game:
         for (i, player) in enumerate(self._players):
             if p == player:
                 return self._initial_states[i]
+
+    '''
+    def check_initialisation(self):
+        assert self._num_players == self.__demand.shape[1] - 1, "number of players should match number of columns in file!"
+        flag_pricing_parameter = (self._pricing_parameter[1] != 0.0 or self._pricing_parameter[2] != 0.0)
+        assert flag_pricing_parameter, "at least one of the cost-coefficients needs to be different from zero!"
+        assert self._pricing_parameter[0] == 0, "current implementation assumes zero constant term!"
+        assert (self._start_date == self.__demand['date']).any(), "start date needs to be within data range"
+        assert (self._end_date == self.__demand['date']).any(), "end date needs to be within data range"
+        assert self._storage_rate > 0, "storage rate needs to be larger than zero"
+        assert self._usage_rate < 0, "usage rate needs to be smaller than zero"
+        assert self._max_capacity >= 0, "max capacity needs to be larger than zero"
+        assert self._min_capacity >= 0, "min capacity needs to be non-negative"
+        flag_initial_state = True
+        for i in range(self._num_players):
+            flag_cur = self._min_capacity <= self._initial_states[i] <= self._max_capacity
+            flag_initial_state = flag_initial_state and flag_cur
+        assert flag_initial_state, "initial state not within the storage limits"
+        assert self._max_time > 0, "iteration time needs to be larger than zero"
+        assert self._max_iter >= 1, "need to perform at least one iteration"
+
+    def calc_costs_for_all(self):
+        L = self.create_empty_arrays()
+        for p in self._players:
+            L[p] = self.calc_current_load_of_others(p)
+
+        L_ref = self.create_empty_arrays()
+        for p in self._players:
+            L_ref[p] = self.calc_reference_load_of_others(p)
+
+        costs = dict()
+        costs_ref = dict()
+        for p in self._players:
+            costs[p] = 0
+            costs_ref[p] = 0
+            for i in range(self._schedule_length):
+                total_load = self.__demand[p][i+self._start_index] + L[p][i] + self.__schedules[p][i]
+                total_load_ref = self.__demand[p][i+self._start_index] + L_ref[p][i]
+
+                total_price = self._pricing_parameter[2] * total_load**2 + \
+                              self._pricing_parameter[1] * total_load
+                total_price_ref = self._pricing_parameter[2] * total_load_ref**2 + \
+                                  self._pricing_parameter[1] * total_load_ref
+
+                costs[p] += (self.__demand[p][i+self._start_index] + self.__schedules[p][i])*total_price
+                costs_ref[p] += self.__demand[p][i+self._start_index] * total_price_ref
+            costs[p] = int(costs[p])
+            costs_ref[p] = int(costs_ref[p])
+
+        return costs, costs_ref
     '''

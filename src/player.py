@@ -1,9 +1,10 @@
 import datetime
 import pandas as pd
+import numpy as np
 
 
 class Player:
-    def __init__(self, name, demand, storage):
+    def __init__(self, name, demand, storage, start_date, game_length):
         self.name = name
         self.demand = self.read_demand(demand)
 
@@ -12,6 +13,10 @@ class Player:
             self.max_capacity, \
             self.min_capacity, \
             self.initial_storage = self.read_storage(storage)
+
+        self.game_start_date = start_date
+        self.game_length = game_length
+        self.game_start_index = self.compute_start_index()
 
     def read_demand(self, demand):
         dateparse = lambda x: datetime.datetime.strptime(x, '%d/%m/%Y')
@@ -38,6 +43,10 @@ class Player:
 
         return storage_rate, usage_rate, max_capacity, min_capacity, initial_storage
 
+    def compute_start_index(self):
+        temp = self.demand['date'].isin([self.game_start_date]).to_list()
+        return temp.index(True)
+
     def display(self):
         """Display Configuration values."""
         print("\ngame class variables:")
@@ -46,5 +55,18 @@ class Player:
                 if "__" not in a:
                     print("{:30} {}".format(a, getattr(self, a)))
         print("\n")
+
+    def set_new_initial_storage(self, value):
+        self.initial_storage = value
+
+    def get_start_index(self):
+        return self.game_start_index
+
+    def get_game_demand(self):
+        temp = np.empty(self.game_length)
+        for i in range(self.game_start_index, self.game_start_index + self.game_length):
+            temp[i] = self.demand[i]
+        return temp
+
 
 

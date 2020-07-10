@@ -13,10 +13,10 @@ class Config:
         self.forecast_error = float(params['forecast-error'])
 
         # pricing
-        self.pricing_parameter = []
-        self.pricing_parameter.append(float(params['pricing-coeff'][0]))
-        self.pricing_parameter.append(float(params['pricing-coeff'][1]))
-        self.pricing_parameter.append(float(params['pricing-coeff'][2]))
+        self.pricing_parameters = []
+        self.pricing_parameters.append(float(params['pricing-coeff'][0]))
+        self.pricing_parameters.append(float(params['pricing-coeff'][1]))
+        self.pricing_parameters.append(float(params['pricing-coeff'][2]))
 
         # iteration
         self.eps = float(params['eps'])
@@ -51,3 +51,22 @@ class Config:
 
     def get_storage_file(self):
         return self.storage_file
+
+    def get_forecast_error(self):
+        return self.forecast_error
+
+    def get_schedule_length(self):
+        return self.schedule_length
+
+    def get_start_date(self):
+        return self.start_date
+
+    def get_max_game_time(self):
+        return self.max_time
+
+    def get_max_game_iter(self):
+        return self.max_iter_game
+
+    def get_pricing_parameters(self):
+        return self.pricing_parameters
+
