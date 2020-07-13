@@ -1,6 +1,8 @@
 # config file containing simulation parameters
 
 debug-flag: True
+plot-flag: True
+repeat: 3
 
 # general
 num-players: 7
@@ -8,6 +10,8 @@ schedule-length: 10
 start-date: '23/03/2020'
 demand-file: './data/covid_allDemand.csv'
 storage-file: './config/storage_details.csv'
+output-dir: './results/'
+output-name: 'test/'
 forecast-error: 0.5
 players:
   0: 'east'

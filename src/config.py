@@ -1,15 +1,18 @@
 import yaml
 import datetime
+import os
 
 
 class Config:
     def __init__(self, file_path):
+        self.file_path = file_path
         params = self.read_parameters(file_path)
+        self.repeat = int(params['repeat'])
         self.debug_flag = params['debug-flag']
+        self.plot_flag = params['plot-flag']
         self.num_players = int(params['num-players'])
         self.schedule_length = int(params['schedule-length'])
         self.start_date = datetime.datetime.strptime(params['start-date'], '%d/%m/%Y')
-        self.end_date = self.start_date + datetime.timedelta(days=self.schedule_length)
         self.forecast_error = float(params['forecast-error'])
 
         # pricing
@@ -32,6 +35,11 @@ class Config:
         for i in range(self.num_players):
             self.player_names.append(params['players'][i])
 
+        self.output_dir = params['output-dir']
+        self.output_name = params['output-name']
+        self.output_path = self.create_output_dir()
+        self.parameter_copy_file = self.copy_config_to_output_dir()
+
     @staticmethod
     def read_parameters(config_file):
         params = {}
@@ -42,6 +50,27 @@ class Config:
         except Exception as e:
             print('*** Error reading the config file - ' + str(e))
         return params
+
+    def create_output_dir(self):
+        output_location = os.path.join(self.output_dir, self.output_name)
+        try:
+            os.makedirs(output_location)
+            print("Directory ", output_location, " Created ")
+        except FileExistsError:
+            print("Directory ", output_location, " already exists")
+        return output_location
+
+    def copy_config_to_output_dir(self):
+        with open(self.file_path) as f:
+            list_doc = yaml.load(f, Loader=yaml.SafeLoader)
+
+        file_name = os.path.join(self.output_path, "parameter_file.yaml")
+        with open(file_name, "w") as f:
+            yaml.dump(list_doc, f, Dumper=yaml.SafeDumper, default_flow_style=False)
+        return file_name
+
+    def set_start_date(self, val):
+        self.start_date = val
 
     def get_player_names(self):
         return self.player_names
@@ -79,3 +108,11 @@ class Config:
     def get_eps(self):
         return self.eps
 
+    def get_repeat(self):
+        return self.repeat
+
+    def get_output_path(self):
+        return self.output_path
+
+    def get_plot_flag(self):
+        return self.plot_flag

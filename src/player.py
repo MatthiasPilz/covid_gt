@@ -56,8 +56,12 @@ class Player:
                     print("{:30} {}".format(a, getattr(self, a)))
         print("\n")
 
-    def set_new_initial_storage(self, value):
+    def set_initial_storage(self, value):
         self.initial_storage = value
+
+    def set_start_date(self, value):
+        self.game_start_date = value
+        self.game_start_index = self.compute_start_index()
 
     def get_game_demand(self):
         temp = np.empty(self.game_length)

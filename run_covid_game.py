@@ -1,6 +1,7 @@
 import argparse
 from src.game import Game
-from src.postprocessing import plot_all
+from src.config import Config
+from src.postprocessing import plot_all, output_files
 
 
 def parse_args():
@@ -13,13 +14,19 @@ def parse_args():
 def main():
     args = parse_args()
     config_file = args.config
+    config = Config(config_file)
+    game = Game(config)
 
-    game = Game(config_file)
-    game.display()
+    for i in range(config.get_repeat()):
+        game.display()
 
-    game.solve_game()
+        new_initial_storage = game.solve_game()
 
-    plot_all(list(game.get_players().keys()), game.get_demand(), game.get_schedules(), game.get_dates(), game.get_fc_demand())
+        if config.get_plot_flag():
+            plot_all(game)
+        output_files(game, config.get_output_path(), i)
+
+        game.reset_for_repetition(new_initial_storage)
 
 
 if __name__ == '__main__':

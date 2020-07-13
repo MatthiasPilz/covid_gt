@@ -7,8 +7,8 @@ from datetime import timedelta
 
 
 class Game:
-    def __init__(self, config_file):
-        self.config = Config(config_file)
+    def __init__(self, config):
+        self.config = config
 
         player_names = self.config.get_player_names()
         demand_file = self.config.get_demand_file()
@@ -88,9 +88,8 @@ class Game:
         print("total number of iterations: {}".format(num_iterations))
         print("execution time for solver: {:.3f}s".format(time.time()-start_time))
 
-        self.adjust_schedules_for_real_demand()
-
-        return flag_convergence
+        final_storage = self.adjust_schedules_for_real_demand()
+        return final_storage
 
     def update_load_other_players(self):
         p = self.cur_player
@@ -195,6 +194,7 @@ class Game:
         # keep track of storage
         storage = self.create_empty_int_arrays()
         new_schedules = self.create_empty_int_arrays()
+        final_storage = self.create_empty_int_arrays()
 
         for p in self.players.keys():
             # sort out initial state and extend by one to evaluate final storage state
@@ -213,8 +213,21 @@ class Game:
 
                 storage[p][i+1] += storage[p][i] + cur_decision
                 new_schedules[p][i] = cur_decision
+            final_storage[p] = storage[p][-1]
 
         self.schedules = new_schedules
+        return final_storage
+
+    def reset_for_repetition(self, new_initial_storage):
+        # reset dates
+        self.config.set_start_date(self.config.get_start_date() + timedelta(days=self.config.get_schedule_length()))
+
+        # update initial storage for each player
+        for p in self.players.keys():
+            self.players[p].set_initial_storage(new_initial_storage[p])
+            self.players[p].set_start_date(self.config.get_start_date())
+
+        self.forecast_demand = self.compute_forecast_demand(self.config.get_forecast_error())
 
     # getter
     def get_players(self):
@@ -239,35 +252,3 @@ class Game:
         for i in range(self.config.get_schedule_length()):
             dates.append((self.config.get_start_date() + timedelta(days=i)).strftime("%d/%m"))
         return dates
-
-    '''
-    def calc_costs_for_all(self):
-        L = self.create_empty_arrays()
-        for p in self._players:
-            L[p] = self.calc_current_load_of_others(p)
-
-        L_ref = self.create_empty_arrays()
-        for p in self._players:
-            L_ref[p] = self.calc_reference_load_of_others(p)
-
-        costs = dict()
-        costs_ref = dict()
-        for p in self._players:
-            costs[p] = 0
-            costs_ref[p] = 0
-            for i in range(self._schedule_length):
-                total_load = self.__demand[p][i+self._start_index] + L[p][i] + self.__schedules[p][i]
-                total_load_ref = self.__demand[p][i+self._start_index] + L_ref[p][i]
-
-                total_price = self._pricing_parameter[2] * total_load**2 + \
-                              self._pricing_parameter[1] * total_load
-                total_price_ref = self._pricing_parameter[2] * total_load_ref**2 + \
-                                  self._pricing_parameter[1] * total_load_ref
-
-                costs[p] += (self.__demand[p][i+self._start_index] + self.__schedules[p][i])*total_price
-                costs_ref[p] += self.__demand[p][i+self._start_index] * total_price_ref
-            costs[p] = int(costs[p])
-            costs_ref[p] = int(costs_ref[p])
-
-        return costs, costs_ref
-    '''
