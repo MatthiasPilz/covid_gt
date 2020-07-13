@@ -3,7 +3,13 @@ import numpy as np
 import pandas as pd
 
 
-def plot_all(players, demands, schedules, dates, fc_demands):
+def plot_all(game):
+    players = list(game.get_players().keys())
+    demands = game.get_demand()
+    schedules = game.get_schedules()
+    dates = game.get_dates()
+    fc_demands = game.get_fc_demand()
+
     plot_aggregated_demand(players, demands, schedules, dates)
     plot_schedules(players, schedules, dates)
     plot_storage(players, schedules, dates)
@@ -91,7 +97,15 @@ def calc_savings(costs, ref, p):
     return savings
 
 
-def output_files(t, p, d, s, fc_d, loc, repeat_counter=0):
+def output_files(game, loc, repeat_counter=0):
+    t = game.get_dates()
+    p = game.get_players()
+    d = game.get_demand()
+    s = game.get_schedules()
+    fc_d = game.get_fc_demand()
+    loc = loc
+    repeat_counter = repeat_counter
+
     agg = np.zeros(len(t))
     for player in p:
         for i in range(len(t)):
