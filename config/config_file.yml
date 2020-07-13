@@ -6,13 +6,13 @@ repeat: 1
 
 # general
 num-players: 7
-schedule-length: 10
+schedule-length: 100
 start-date: '23/03/2020'
 demand-file: './data/covid_allDemand.csv'
 storage-file: './config/storage_details.csv'
 output-dir: './results/'
-output-name: 'forecast_error_0.5/'
-forecast-error: 0.5
+output-name: 'forecast_error_1.0/'
+forecast-error: 1.0
 players:
   0: 'east'
   1: 'london'
