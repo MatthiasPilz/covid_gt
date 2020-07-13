@@ -16,17 +16,25 @@ def main():
     config_file = args.config
     config = Config(config_file)
     game = Game(config)
+    repetition = 0
 
-    for i in range(config.get_repeat()):
-        game.display()
+    while True:
+        if config.get_debug_flag():
+            game.display()
 
-        new_initial_storage = game.solve_game()
+        final_storage = game.solve_game()
 
         if config.get_plot_flag():
             plot_all(game)
-        output_files(game, config.get_output_path(), i)
+        output_files(game, config.get_output_path(), repetition)
 
-        game.reset_for_repetition(new_initial_storage)
+        repetition += 1
+        if repetition < config.get_repeat():
+            game.reset_for_repetition(final_storage)
+        else:
+            break
+
+    print("completed simulation, good bye")
 
 
 if __name__ == '__main__':
