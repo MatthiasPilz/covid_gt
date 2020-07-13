@@ -1,7 +1,6 @@
 import time
 import numpy as np
 from .player import Player
-from .config import Config
 from scipy.optimize import minimize, LinearConstraint, Bounds
 from datetime import timedelta
 
