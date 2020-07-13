@@ -70,3 +70,12 @@ class Config:
     def get_pricing_parameters(self):
         return self.pricing_parameters
 
+    def get_debug_flag(self):
+        return self.debug_flag
+
+    def get_iter_opt(self):
+        return self.max_iter_opt
+
+    def get_eps(self):
+        return self.eps
+

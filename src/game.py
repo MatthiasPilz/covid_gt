@@ -1,9 +1,9 @@
 import time
 import numpy as np
-import random
 from .player import Player
 from .config import Config
 from scipy.optimize import minimize, LinearConstraint, Bounds
+from datetime import timedelta
 
 
 class Game:
@@ -25,6 +25,7 @@ class Game:
 
         forecast_error = self.config.get_forecast_error()
         self.forecast_demand = self.compute_forecast_demand(forecast_error)
+        self.cur_player = list(self.players.keys())[0]
 
     def display(self):
         """Display Configuration values."""
@@ -55,7 +56,7 @@ class Game:
             error_stdv = error_mean * 0.33
 
             for i in range(self.config.get_schedule_length()):
-                temp[p] = self.players[p].get_game_demand()[i] - int(np.random.normal(error_mean, error_stdv))
+                temp[p][i] = self.players[p].get_game_demand()[i] - int(np.random.normal(error_mean, error_stdv))
             # set negative values to 0
             temp[p] = np.where(temp[p] < 0, 0, temp[p])
         return temp
@@ -72,8 +73,9 @@ class Game:
             solution_profile = self.copy_schedules_to_solution()
 
             for p in self.players.keys():
-                self.update_load_other_players(p)
-                self.schedules[p] = self.find_optimal_response(p)
+                self.cur_player = p
+                self.update_load_other_players()
+                self.schedules[p] = self.find_optimal_response()
 
             flag_convergence, achieved_eps = self.check_for_convergence(solution_profile)
             flag_time_is_up = True if time.time() > end_time else False
@@ -90,13 +92,14 @@ class Game:
 
         return flag_convergence
 
-    def update_load_other_players(self, p):
+    def update_load_other_players(self):
+        p = self.cur_player
         self.L[p] = np.zeros(self.config.get_schedule_length())
         for other in self.players.keys():
             if other == p:
                 continue
             for i in range(self.config.get_schedule_length()):
-                self.L[p][i] = self.players[p].get_game_demand()[i] + self.schedules[other][i]
+                self.L[p][i] = self.players[other].get_game_demand()[i] + self.schedules[other][i]
 
     def copy_schedules_to_solution(self):
         temp = self.create_empty_int_arrays()
@@ -111,8 +114,8 @@ class Game:
         b = self.config.get_pricing_parameters()[1]
 
         for i in range(self.config.get_schedule_length()):
-            d = self.forecast_demand[i]
-            L = self._load_other_players[i]
+            d = self.forecast_demand[self.cur_player][i]
+            L = self.L[self.cur_player][i]
 
             costs_i = a*d**3 + 2*a*d**2*L + 3*a*d**2*x[i] + a*d*L**2 + 4*a*d*L*x[i] + 3*a*d*x[i]**2 + \
                 a*L**2*x[i] + 2*a*L*x[i]**2 + a*x[i]**3 + b*d**2 + b*d*L + 2*b*d*x[i] + b*L*x[i] + b*x[i]**2
@@ -121,47 +124,48 @@ class Game:
         return costs
 
     def objective_der(self, x):
-        a = self._pricing_parameter[2]
-        b = self._pricing_parameter[1]
+        a = self.config.get_pricing_parameters()[2]
+        b = self.config.get_pricing_parameters()[1]
         der = np.zeros_like(x)
-        for i in range(self._schedule_length):
-            d = self._fc_demand_current_player[i]
-            L = self._load_other_players[i]
+        for i in range(self.config.get_schedule_length()):
+            d = self.forecast_demand[self.cur_player][i]
+            L = self.L[self.cur_player][i]
 
             der[i] = a*((d+x[i])+L)**2 + 2*a*(d+x[i])*(d+x[i]+L) + b*(d+L+x[i]) + b*(d+x[i])
         return der
 
     def objective_hess(self, x):
-        a = self._pricing_parameter[2]
-        b = self._pricing_parameter[1]
-        hess = np.zeros((self._schedule_length, self._schedule_length))
-        for i in range(self._schedule_length):
-            d = self._fc_demand_current_player[i]
-            L = self._load_other_players[i]
+        a = self.config.get_pricing_parameters()[2]
+        b = self.config.get_pricing_parameters()[1]
+        s = self.config.get_schedule_length()
+        hess = np.zeros((s, s))
+        for i in range(s):
+            d = self.forecast_demand[self.cur_player][i]
+            L = self.L[self.cur_player][i]
 
             hess[i][i] = 2*(a*(3*d + 2*L + 3*x[i]) + b)
         return hess
 
-    def find_optimal_response(self, p):
+    def find_optimal_response(self):
+        p = self.cur_player
+        x_0 = self.schedules[p]
 
-        x_0 = self.__schedules[p]
-
-        lb = np.empty(self._schedule_length)
-        lb.fill(-self._initial_state_current_player)
-        A = 1.0 * np.eye(self._schedule_length)
-        for i in range(self._schedule_length):
-            for j in range(self._schedule_length):
+        lb = np.empty(self.config.get_schedule_length())
+        lb.fill(-self.players[p].get_initial_storage())
+        A = 1.0 * np.eye(self.config.get_schedule_length())
+        for i in range(self.config.get_schedule_length()):
+            for j in range(self.config.get_schedule_length()):
                 if j < i:
                     A[i][j] = 1
 
-        ub = np.empty(self._schedule_length)
+        ub = np.empty(self.config.get_schedule_length())
         ub.fill(np.inf)
         # cons = {'type': 'ineq', 'fun': lambda x: -(A @ x - lb)}
         linear_constraint = LinearConstraint(A, lb, ub)
 
-        bounds = Bounds(-1.0*self._fc_demand_current_player, np.ones(self._schedule_length)*self._storage_rate)
+        bounds = Bounds(-1.0*self.forecast_demand[p], np.ones(self.config.get_schedule_length())*self.players[p].get_storage_rate())
 
-        if self._debug_flag:
+        if self.config.get_debug_flag():
             options = {'disp': True, 'xtol': 0.000001}
         else:
             options = {'xtol': 0.000001}
@@ -177,97 +181,66 @@ class Game:
 
     def check_for_convergence(self, solution):
         val = 0
-        for p in self._players:
-            for i in range(self._schedule_length):
-                val += (self.__schedules[p][i] - solution[p][i])**2
+        for p in self.players.keys():
+            for i in range(self.config.get_schedule_length()):
+                val += (self.schedules[p][i] - solution[p][i])**2
 
         val = np.sqrt(val)
-        val /= self._schedule_length
+        val /= self.config.get_schedule_length()
 
-        result_flag = True if val < self._eps else False
+        result_flag = True if val < self.config.get_eps() else False
         return result_flag, val
-
-    def set_random_schedule(self):
-        for p in self._players:
-            for i in range(self._schedule_length):
-                self.__schedules[p][i] = random.randint(-10000, 10000)
 
     def adjust_schedules_for_real_demand(self):
         # keep track of storage
-        storage = self.create_empty_arrays()
-        new_schedules = self.create_empty_arrays()
+        storage = self.create_empty_int_arrays()
+        new_schedules = self.create_empty_int_arrays()
 
-        for k, p in enumerate(self._players):
+        for p in self.players.keys():
             # sort out initial state and extend by one to evaluate final storage state
-            storage[p][0] = self._initial_states[k]
+            storage[p][0] = self.players[p].get_initial_storage()
             storage[p] = np.append(storage[p], 0)
 
-            for i in range(self._schedule_length):
+            d = self.players[p].get_game_demand()
+            for i in range(self.config.get_schedule_length()):
                 # adding to storage is currently not restricted
                 # check only when using the stored PPE
-                cur_decision = self.__schedules[p][i]
+                cur_decision = self.schedules[p][i]
                 if cur_decision < 0:
-                    temp = np.minimum(storage[p][i], self.__demand[p][i+self._start_index])
+                    temp = np.minimum(storage[p][i], d[i])
                     if abs(cur_decision) > temp:
                         cur_decision = -temp
 
                 storage[p][i+1] += storage[p][i] + cur_decision
                 new_schedules[p][i] = cur_decision
 
-        self.__schedules = new_schedules
+        self.schedules = new_schedules
 
     # getter
     def get_players(self):
-        return self._players
+        return self.players
 
     def get_schedules(self):
-        return self.__schedules
+        return self.schedules
 
     def get_fc_demand(self):
-        fc_demand = self.create_empty_arrays()
-        for p in self._players:
-            for i in range(self._schedule_length):
-                fc_demand[p][i] = self.__fc_demand[p][i + self._start_index]
-        return fc_demand
+        return self.forecast_demand
 
     def get_demand(self):
-        demand = self.create_empty_arrays()
-        for p in self._players:
-            for i in range(self._schedule_length):
-                demand[p][i] = self.__demand[p][i + self._start_index]
-        return demand
+        temp = self.create_empty_int_arrays()
+        for p in self.players.keys():
+            d = self.players[p].get_game_demand()
+            for i in range(self.config.get_schedule_length()):
+                temp[p][i] = d[i]
+        return temp
 
     def get_dates(self):
         dates = []
-        for i in range(self._schedule_length):
-            dates.append(self.__demand['date'][i + self._start_index].strftime("%d/%m"))
+        for i in range(self.config.get_schedule_length()):
+            dates.append((self.config.get_start_date() + timedelta(days=i)).strftime("%d/%m"))
         return dates
 
-    def get_initial_state(self, p):
-        for (i, player) in enumerate(self._players):
-            if p == player:
-                return self._initial_states[i]
-
     '''
-    def check_initialisation(self):
-        assert self._num_players == self.__demand.shape[1] - 1, "number of players should match number of columns in file!"
-        flag_pricing_parameter = (self._pricing_parameter[1] != 0.0 or self._pricing_parameter[2] != 0.0)
-        assert flag_pricing_parameter, "at least one of the cost-coefficients needs to be different from zero!"
-        assert self._pricing_parameter[0] == 0, "current implementation assumes zero constant term!"
-        assert (self._start_date == self.__demand['date']).any(), "start date needs to be within data range"
-        assert (self._end_date == self.__demand['date']).any(), "end date needs to be within data range"
-        assert self._storage_rate > 0, "storage rate needs to be larger than zero"
-        assert self._usage_rate < 0, "usage rate needs to be smaller than zero"
-        assert self._max_capacity >= 0, "max capacity needs to be larger than zero"
-        assert self._min_capacity >= 0, "min capacity needs to be non-negative"
-        flag_initial_state = True
-        for i in range(self._num_players):
-            flag_cur = self._min_capacity <= self._initial_states[i] <= self._max_capacity
-            flag_initial_state = flag_initial_state and flag_cur
-        assert flag_initial_state, "initial state not within the storage limits"
-        assert self._max_time > 0, "iteration time needs to be larger than zero"
-        assert self._max_iter >= 1, "need to perform at least one iteration"
-
     def calc_costs_for_all(self):
         L = self.create_empty_arrays()
         for p in self._players:

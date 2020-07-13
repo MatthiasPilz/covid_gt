@@ -59,14 +59,17 @@ class Player:
     def set_new_initial_storage(self, value):
         self.initial_storage = value
 
-    def get_start_index(self):
-        return self.game_start_index
-
     def get_game_demand(self):
         temp = np.empty(self.game_length)
-        for i in range(self.game_start_index, self.game_start_index + self.game_length):
-            temp[i] = self.demand[i]
+        for i in range(self.game_length):
+            temp[i] = self.demand['demand'][self.game_start_index + i]
         return temp
+
+    def get_initial_storage(self):
+        return self.initial_storage
+
+    def get_storage_rate(self):
+        return self.storage_rate
 
 
 

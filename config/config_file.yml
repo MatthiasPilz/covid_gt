@@ -8,7 +8,7 @@ schedule-length: 10
 start-date: '23/03/2020'
 demand-file: './data/covid_allDemand.csv'
 storage-file: './config/storage_details.csv'
-forecast-error: 0.7
+forecast-error: 0.5
 players:
   0: 'east'
   1: 'london'
@@ -28,5 +28,5 @@ pricing-coeff:
 max-time: 1300
 max-iter-game: 20
 max-iter-opt: 1000
-eps: 100
+eps: 1
 
