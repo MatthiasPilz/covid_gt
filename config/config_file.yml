@@ -1,18 +1,18 @@
 # config file containing simulation parameters
 
-debug-flag: False
+debug-flag: True
 plot-flag: True
 repeat: 1
 
 # general
 num-players: 7
-schedule-length: 100
-start-date: '23/03/2020'
+schedule-length: 164
+start-date: '23/01/2020'
 demand-file: './data/covid_allDemand.csv'
 storage-file: './config/storage_details.csv'
 output-dir: './results/'
-output-name: 'forecast_error_1.0/'
-forecast-error: 1.0
+output-name: 'test/'
+forecast-error: 0.3
 players:
   0: 'east'
   1: 'london'
@@ -25,8 +25,8 @@ players:
 # pricing
 pricing-coeff:
   0: 0.0
-  1: 1.0
-  2: 1.0
+  1: 0.01
+  2: 0.000008
 
 # iteration
 max-time: 1300

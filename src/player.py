@@ -75,5 +75,8 @@ class Player:
     def get_storage_rate(self):
         return self.storage_rate
 
+    def get_max_capacity(self):
+        return self.max_capacity
+
 
 
