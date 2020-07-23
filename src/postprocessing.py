@@ -3,20 +3,20 @@ import numpy as np
 import pandas as pd
 
 
-def plot_all(game):
+def plot_all(game, path):
     players = list(game.get_players().keys())
     demands = game.get_demand()
     schedules = game.get_schedules()
     dates = game.get_dates()
     fc_demands = game.get_fc_demand()
 
-    plot_aggregated_demand(players, demands, schedules, dates)
-    plot_schedules(players, schedules, dates)
-    plot_storage(players, schedules, dates)
-    plot_forecasted_values(players, demands, fc_demands, dates)
+    plot_aggregated_demand(players, demands, schedules, dates, path)
+    plot_schedules(players, schedules, dates, path)
+    plot_storage(players, schedules, dates, path)
+    plot_forecasted_values(players, demands, fc_demands, dates, path)
 
 
-def plot_aggregated_demand(p, d, s, t):
+def plot_aggregated_demand(p, d, s, t, path):
     # compute aggregated demand
     agg = np.zeros(len(t))
     for player in p:
@@ -35,11 +35,11 @@ def plot_aggregated_demand(p, d, s, t):
     plt.xticks(rotation=45, ha='right')
     plt.legend(['reference', 'game'])
     plt.title("aggregated demand")
-    plt.savefig('./results/aggregated_demand.png')
+    plt.savefig(path + '/aggregated_demand.png')
     plt.show()
 
 
-def plot_schedules(p, s, t):
+def plot_schedules(p, s, t, path):
     # plot
     fig, ax = plt.subplots()
     for player in p:
@@ -47,10 +47,11 @@ def plot_schedules(p, s, t):
     plt.xticks(rotation=45, ha='right')
     plt.title("schedules")
     plt.legend(p)
+    plt.savefig(path + '/schedules.png')
     plt.show()
 
 
-def plot_storage(p, s, t):
+def plot_storage(p, s, t, path):
     # adding final element to t
     time = t.copy()
     time.append('final')
@@ -73,10 +74,11 @@ def plot_storage(p, s, t):
     plt.xticks(rotation=45, ha='right')
     plt.title("stored PPE")
     plt.legend(p)
+    plt.savefig(path + '/storage.png')
     plt.show()
 
 
-def plot_forecasted_values(p, d, fc_d, t):
+def plot_forecasted_values(p, d, fc_d, t, path):
     # plot
     fig, ax = plt.subplots()
     for player in p:
@@ -85,6 +87,7 @@ def plot_forecasted_values(p, d, fc_d, t):
     plt.xticks(rotation=45, ha='right')
     plt.title("forecasted demand")
     plt.legend([p, p])
+    plt.savefig(path + '/forecasts.png')
     plt.show()
 
 

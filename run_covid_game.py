@@ -25,7 +25,7 @@ def main():
         final_storage = game.solve_game()
 
         if config.get_plot_flag():
-            plot_all(game)
+            plot_all(game, config.get_output_path())
         output_files(game, config.get_output_path(), repetition)
 
         repetition += 1
