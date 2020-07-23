@@ -35,6 +35,7 @@ def plot_aggregated_demand(p, d, s, t):
     plt.xticks(rotation=45, ha='right')
     plt.legend(['reference', 'game'])
     plt.title("aggregated demand")
+    plt.savefig('./results/aggregated_demand.png')
     plt.show()
 
 

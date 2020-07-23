@@ -20,6 +20,7 @@ class Config:
         self.pricing_parameters.append(float(params['pricing-coeff'][0]))
         self.pricing_parameters.append(float(params['pricing-coeff'][1]))
         self.pricing_parameters.append(float(params['pricing-coeff'][2]))
+        self.pricing_parameters.append(float(params['pricing-coeff'][3]))
 
         # iteration
         self.eps = float(params['eps'])
@@ -29,6 +30,7 @@ class Config:
 
         self.demand_file = params['demand-file']
         self.storage_file = params['storage-file']
+        self.additional_storage = params['additional-storage']
 
         # players
         self.player_names = []
@@ -116,3 +118,6 @@ class Config:
 
     def get_plot_flag(self):
         return self.plot_flag
+
+    def get_additional_storage(self):
+        return self.additional_storage

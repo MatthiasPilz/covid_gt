@@ -14,9 +14,10 @@ class Game:
         storage_file = self.config.get_storage_file()
         start_date = self.config.get_start_date()
         game_length = self.config.get_schedule_length()
+        additional_storage = self.config.get_additional_storage()
         self.players = dict()
         for name in player_names:
-            self.players[name] = Player(name, demand_file, storage_file, start_date, game_length)
+            self.players[name] = Player(name, demand_file, storage_file, start_date, game_length, additional_storage)
 
         # derived variables:
         self.schedules = self.create_empty_int_arrays()
@@ -106,21 +107,42 @@ class Game:
                 temp[p][i] = self.schedules[p][i]
         return temp
 
-    '''
     def objective(self, x):
         costs = 0
         a = self.config.get_pricing_parameters()[2]
         b = self.config.get_pricing_parameters()[1]
-
         for i in range(self.config.get_schedule_length()):
             d = self.forecast_demand[self.cur_player][i]
             L = self.L[self.cur_player][i]
 
+            # storage_cost_i = 0.0001 * H ** 2 + 10 * M * max_capacity
             costs_i = a*d**3 + 2*a*d**2*L + 3*a*d**2*x[i] + a*d*L**2 + 4*a*d*L*x[i] + 3*a*d*x[i]**2 + \
-                a*L**2*x[i] + 2*a*L*x[i]**2 + a*x[i]**3 + b*d**2 + b*d*L + 2*b*d*x[i] + b*L*x[i] + b*x[i]**2
-
+                      a*L**2*x[i] + 2*a*L*x[i]**2 + a*x[i]**3 + b*d**2 + b*d*L + 2*b*d*x[i] + b*L*x[i] + b*x[i]**2
+            # costs += (costs_i + storage_cost_i)
             costs += costs_i
-        return costs
+
+        # compute how much is stored based on the current schedule x
+        stored = np.zeros(self.config.get_schedule_length()+1, dtype=int)
+        stored[0] = self.get_players()[self.cur_player].get_initial_storage()
+        storage_costs = 0
+        c1 = self.config.get_pricing_parameters()[3]
+        c2 = self.config.get_pricing_parameters()[0]
+        max_capacity = self.get_players()[self.cur_player].get_max_capacity()
+        for i in range(self.config.get_schedule_length()):
+            stored[i+1] += stored[i] + x[i]
+
+            if stored[i+1] > max_capacity:
+                storage_cost_i = c1*stored[i+1]**2 + c2*(abs(max_capacity - stored[i+1]))
+            else:
+                storage_cost_i = c1*stored[i+1]**2
+            storage_costs += storage_cost_i
+
+        # # add costs for running over the given value
+        #
+        # if max(stored) > max_capacity:
+        #     costs += self.config.get_pricing_parameters()[0] * (max_capacity - max(stored))
+
+        return costs+storage_costs
 
     def objective_der(self, x):
         a = self.config.get_pricing_parameters()[2]
@@ -143,64 +165,6 @@ class Game:
             L = self.L[self.cur_player][i]
 
             hess[i][i] = 2*(a*(3*d + 2*L + 3*x[i]) + b)
-        return hess
-    '''
-
-    def objective(self, x):
-        costs = 0
-        max_capacity = self.get_players()[self.cur_player].get_max_capacity()
-        a = self.config.get_pricing_parameters()[2]
-        b = self.config.get_pricing_parameters()[1]
-        flag_max_capacity_overstepped = False
-        for i in range(self.config.get_schedule_length()):
-            capacity = 0
-            M = 0
-            d = self.forecast_demand[self.cur_player][i]
-            L = self.L[self.cur_player][i]
-            for j in range(i + 1):
-                capacity += x[j]
-            if not flag_max_capacity_overstepped:
-                if capacity > max_capacity:
-                    flag_max_capacity_overstepped = True
-                    M = 1
-            if x[i] > 0:
-                H = x[i]
-            else:
-                H = 0
-
-            storage_cost_i = 0.0001 * H ** 2 + 10 * M * max_capacity
-            costs_i = a*d**3 + 2*a*d**2*L + 3*a*d**2*x[i] + a*d*L**2 + 4*a*d*L*x[i] + 3*a*d*x[i]**2 + \
-                      a*L**2*x[i] + 2*a*L*x[i]**2 + a*x[i]**3 + b*d**2 + b*d*L + 2*b*d*x[i] + b*L*x[i] + b*x[i]**2
-            costs += (costs_i + storage_cost_i)
-        return costs
-
-    def objective_der(self, x):
-        a = self.config.get_pricing_parameters()[2]
-        b = self.config.get_pricing_parameters()[1]
-        der = np.zeros_like(x)
-        for i in range(self.config.get_schedule_length()):
-            d = self.forecast_demand[self.cur_player][i]
-            L = self.L[self.cur_player][i]
-
-            if x[i] > 0:
-                der[i] = a*((d+x[i])+L)**2 + 2*a*(d+x[i])*(d+x[i]+L) + b*(d+L+x[i]) + b*(d+x[i]) + 2*0.0001*x[i]
-            else:
-                der[i] = a*((d+x[i])+L)**2 + 2*a*(d+x[i])*(d+x[i]+L) + b*(d+L+x[i]) + b*(d+x[i])
-        return der
-
-    def objective_hess(self, x):
-        a = self.config.get_pricing_parameters()[2]
-        b = self.config.get_pricing_parameters()[1]
-        s = self.config.get_schedule_length()
-        hess = np.zeros((s, s))
-        for i in range(s):
-            d = self.forecast_demand[self.cur_player][i]
-            L = self.L[self.cur_player][i]
-
-            if x[i] > 0:
-                hess[i][i] = 2*(a*(3*d + 2*L + 3*x[i]) + b) + 2*0.0001
-            else:
-                hess[i][i] = 2*(a*(3*d + 2*L + 3*x[i]) + b)
         return hess
 
     def find_optimal_response(self):

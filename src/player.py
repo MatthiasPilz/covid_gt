@@ -4,7 +4,7 @@ import numpy as np
 
 
 class Player:
-    def __init__(self, name, demand, storage, start_date, game_length):
+    def __init__(self, name, demand, storage, start_date, game_length, additional_storage=0.0):
         self.name = name
         self.demand = self.read_demand(demand)
 
@@ -13,6 +13,10 @@ class Player:
             self.max_capacity, \
             self.min_capacity, \
             self.initial_storage = self.read_storage(storage)
+
+        self.max_capacity = int(self.max_capacity + additional_storage*self.max_capacity)
+        self.usage_rate = int(self.usage_rate + additional_storage*self.usage_rate)
+        self.storage_rate = int(self.storage_rate + additional_storage*self.storage_rate)
 
         self.game_start_date = start_date
         self.game_length = game_length

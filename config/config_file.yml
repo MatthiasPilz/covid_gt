@@ -10,9 +10,10 @@ schedule-length: 164
 start-date: '23/01/2020'
 demand-file: './data/covid_allDemand.csv'
 storage-file: './config/storage_details.csv'
+additional-storage: 50.0
 output-dir: './results/'
-output-name: 'test/'
-forecast-error: 0.3
+output-name: '23_january_test/'
+forecast-error: 0.2
 players:
   0: 'east'
   1: 'london'
@@ -23,14 +24,17 @@ players:
   6: 'south_west'
 
 # pricing
+# 0,3 is for the storage,
+# 1,2 are for the general quadratic pricing
 pricing-coeff:
-  0: 0.0
+  0: 50000.0
   1: 0.01
   2: 0.000008
+  3: 0.000001
 
 # iteration
 max-time: 1300
 max-iter-game: 20
 max-iter-opt: 1000
-eps: 1
+eps: 3
 
