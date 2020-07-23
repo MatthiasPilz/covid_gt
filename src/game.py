@@ -137,11 +137,6 @@ class Game:
                 storage_cost_i = c1*stored[i+1]**2
             storage_costs += storage_cost_i
 
-        # # add costs for running over the given value
-        #
-        # if max(stored) > max_capacity:
-        #     costs += self.config.get_pricing_parameters()[0] * (max_capacity - max(stored))
-
         return costs+storage_costs
 
     def objective_der(self, x):

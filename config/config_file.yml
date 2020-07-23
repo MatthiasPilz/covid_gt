@@ -8,12 +8,12 @@ repeat: 1
 num-players: 7
 schedule-length: 343
 start-date: '23/01/2020'
-demand-file: './data/covid_allDemand.csv'
+demand-file: './data/second_peak_Dec01.csv'
 storage-file: './config/storage_details.csv'
-additional-storage: 0.0
+additional-storage: 10.0
 output-dir: './results/'
-output-name: 'wholeYear_reference/'
-forecast-error: 0.0
+output-name: 'wholeYear_FE0.2_AS10.0/'
+forecast-error: 0.2
 players:
   0: 'east'
   1: 'london'
