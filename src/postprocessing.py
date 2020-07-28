@@ -30,8 +30,8 @@ def plot_aggregated_demand(p, d, s, t, path):
 
     # plot
     fig, ax = plt.subplots()
-    ax.bar(t, ref)
-    ax.bar(t, agg)
+    ax.plot(t, ref)
+    ax.plot(t, agg)
     plt.xticks(rotation=45, ha='right')
     plt.legend(['reference', 'game'])
     plt.title("aggregated demand")

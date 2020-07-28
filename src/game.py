@@ -122,20 +122,20 @@ class Game:
             costs += costs_i
 
         # compute how much is stored based on the current schedule x
-        stored = np.zeros(self.config.get_schedule_length()+1, dtype=int)
-        stored[0] = self.get_players()[self.cur_player].get_initial_storage()
+        # stored = np.zeros(self.config.get_schedule_length()+1, dtype=int)
+        # stored[0] = self.get_players()[self.cur_player].get_initial_storage()
         storage_costs = 0
-        c1 = self.config.get_pricing_parameters()[3]
-        c2 = self.config.get_pricing_parameters()[0]
-        max_capacity = self.get_players()[self.cur_player].get_max_capacity()
-        for i in range(self.config.get_schedule_length()):
-            stored[i+1] += stored[i] + x[i]
-
-            if stored[i+1] > max_capacity:
-                storage_cost_i = c1*stored[i+1]**2 + c2*(abs(max_capacity - stored[i+1]))
-            else:
-                storage_cost_i = c1*stored[i+1]**2
-            storage_costs += storage_cost_i
+        # c1 = self.config.get_pricing_parameters()[3]
+        # c2 = self.config.get_pricing_parameters()[0]
+        # max_capacity = self.get_players()[self.cur_player].get_max_capacity()
+        # for i in range(self.config.get_schedule_length()):
+        #     stored[i+1] += stored[i] + x[i]
+        #
+        #     if stored[i+1] > max_capacity:
+        #         storage_cost_i = c1*stored[i+1]**2 + c2*(abs(max_capacity - stored[i+1]))
+        #     else:
+        #         storage_cost_i = c1*stored[i+1]**2
+        #     storage_costs += storage_cost_i
 
         return costs+storage_costs
 
@@ -175,7 +175,8 @@ class Game:
                     A[i][j] = 1
 
         ub = np.empty(self.config.get_schedule_length())
-        ub.fill(np.inf)
+        ub.fill(self.get_players()[self.cur_player].get_max_capacity())
+        # ub.fill(np.inf)
         # cons = {'type': 'ineq', 'fun': lambda x: -(A @ x - lb)}
         linear_constraint = LinearConstraint(A, lb, ub)
 
