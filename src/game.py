@@ -1,5 +1,6 @@
 import time
 import numpy as np
+import pandas as pd
 from .player import Player
 from scipy.optimize import minimize, LinearConstraint, Bounds
 from datetime import timedelta
@@ -42,7 +43,7 @@ class Game:
     def create_empty_int_arrays(self):
         temp = dict()
         for p in self.players.keys():
-            s = np.zeros(self.config.get_schedule_length(), dtype=np.int32)
+            s = np.zeros(self.config.get_schedule_length(), dtype=np.int64)
             temp[p] = s
         return temp
 
@@ -115,29 +116,10 @@ class Game:
             d = self.forecast_demand[self.cur_player][i]
             L = self.L[self.cur_player][i]
 
-            # storage_cost_i = 0.0001 * H ** 2 + 10 * M * max_capacity
             costs_i = a*d**3 + 2*a*d**2*L + 3*a*d**2*x[i] + a*d*L**2 + 4*a*d*L*x[i] + 3*a*d*x[i]**2 + \
                       a*L**2*x[i] + 2*a*L*x[i]**2 + a*x[i]**3 + b*d**2 + b*d*L + 2*b*d*x[i] + b*L*x[i] + b*x[i]**2
-            # costs += (costs_i + storage_cost_i)
             costs += costs_i
-
-        # compute how much is stored based on the current schedule x
-        # stored = np.zeros(self.config.get_schedule_length()+1, dtype=int)
-        # stored[0] = self.get_players()[self.cur_player].get_initial_storage()
-        storage_costs = 0
-        # c1 = self.config.get_pricing_parameters()[3]
-        # c2 = self.config.get_pricing_parameters()[0]
-        # max_capacity = self.get_players()[self.cur_player].get_max_capacity()
-        # for i in range(self.config.get_schedule_length()):
-        #     stored[i+1] += stored[i] + x[i]
-        #
-        #     if stored[i+1] > max_capacity:
-        #         storage_cost_i = c1*stored[i+1]**2 + c2*(abs(max_capacity - stored[i+1]))
-        #     else:
-        #         storage_cost_i = c1*stored[i+1]**2
-        #     storage_costs += storage_cost_i
-
-        return costs+storage_costs
+        return costs
 
     def objective_der(self, x):
         a = self.config.get_pricing_parameters()[2]
@@ -246,6 +228,63 @@ class Game:
             self.players[p].set_start_date(self.config.get_start_date())
 
         self.forecast_demand = self.compute_forecast_demand(self.config.get_forecast_error())
+
+    def write_results_to_file(self):
+        # have the very latest L before output
+        for p in self.players.keys():
+            self.cur_player = p
+            self.update_load_other_players()
+
+        # variables for all the files:
+        dates = self.get_dates()
+        demand = self.get_demand()
+
+        # load per player and per day
+        loads = self.create_empty_int_arrays()
+        for p in self.players.keys():
+            for i in range(len(dates)):
+                loads[p][i] = demand[p][i] + self.schedules[p][i]
+        df = pd.DataFrame(loads)
+        df['time'] = dates
+        df.to_csv(self.config.get_output_path() + 'loads.csv')
+
+        # schedule per player and per day
+        df = pd.DataFrame(self.schedules)
+        df['time'] = dates
+        df.to_csv(self.config.get_output_path() + 'schedules.csv')
+
+        # costs per player and per day
+        costs = self.create_empty_int_arrays()
+        a = self.config.get_pricing_parameters()[2]
+        b = self.config.get_pricing_parameters()[1]
+        for p in self.players.keys():
+            x = self.schedules[p]
+            for i in range(self.config.get_schedule_length()):
+                d = demand[p][i]
+                L = self.L[p][i]
+                costs[p][i] = a*d**3 + 2*a*d**2*L + 3*a*d**2*x[i] + a*d*L**2 + 4*a*d*L*x[i] + 3*a*d*x[i]**2 + \
+                      a*L**2*x[i] + 2*a*L*x[i]**2 + a*x[i]**3 + b*d**2 + b*d*L + 2*b*d*x[i] + b*L*x[i] + b*x[i]**2
+        df = pd.DataFrame(costs)
+        df['time'] = dates
+        df.to_csv(self.config.get_output_path() + 'costs.csv')
+
+        # reference costs per player and per day
+        costs_ref = self.create_empty_int_arrays()
+        a = self.config.get_pricing_parameters()[2]
+        b = self.config.get_pricing_parameters()[1]
+        for p in self.players.keys():
+            for i in range(self.config.get_schedule_length()):
+                d = demand[p][i]
+                L = self.L[p][i]
+                costs_ref[p][i] = a*d**3 + 2*a*d**2*L + a*d*L**2 + b*d**2 + b*d*L
+        df = pd.DataFrame(costs_ref)
+        df['time'] = dates
+        df.to_csv(self.config.get_output_path() + 'costs_ref.csv')
+
+        # forecasted demand per player and per day
+        df = pd.DataFrame(self.forecast_demand)
+        df['time'] = dates
+        df.to_csv(self.config.get_output_path() + 'forecasts.csv')
 
     # getter
     def get_players(self):

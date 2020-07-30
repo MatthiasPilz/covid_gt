@@ -38,9 +38,10 @@ class Config:
             self.player_names.append(params['players'][i])
 
         self.output_dir = params['output-dir']
-        self.output_name = params['output-name']
-        self.output_path = self.create_output_dir()
-        self.parameter_copy_file = self.copy_config_to_output_dir()
+        # self.output_name = params['output-name']
+        self.output_name = self.create_output_name_from_parameters()
+        # self.output_path = self.create_output_dir()
+        # self.parameter_copy_file = self.copy_config_to_output_dir()
 
     @staticmethod
     def read_parameters(config_file):
@@ -70,6 +71,23 @@ class Config:
         with open(file_name, "w") as f:
             yaml.dump(list_doc, f, Dumper=yaml.SafeDumper, default_flow_style=False)
         return file_name
+
+    def create_output_name_from_parameters(self):
+        result = ""
+        result += self.start_date.strftime('%d%b%Y') + "_"
+        result += self.demand_file[-9:-4] + "_"
+        result += "storage" + str(self.additional_storage) + "/"
+        return result
+
+    def reset_for_new_configuration(self, new_start_date, new_demand_file, new_additional_storage, new_schedule_length=100):
+        self.start_date = datetime.datetime.strptime(new_start_date, '%d/%m/%Y')
+        self.demand_file = new_demand_file
+        self.additional_storage = new_additional_storage
+        self.schedule_length = new_schedule_length
+
+        self.output_name = self.create_output_name_from_parameters()
+        self.output_path = self.create_output_dir()
+        self.parameter_copy_file = self.copy_config_to_output_dir()
 
     def set_start_date(self, val):
         self.start_date = val

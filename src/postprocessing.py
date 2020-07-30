@@ -36,7 +36,8 @@ def plot_aggregated_demand(p, d, s, t, path):
     plt.legend(['reference', 'game'])
     plt.title("aggregated demand")
     plt.savefig(path + '/aggregated_demand.png')
-    plt.show()
+    plt.close(fig)
+    # plt.show()
 
 
 def plot_schedules(p, s, t, path):
@@ -48,7 +49,8 @@ def plot_schedules(p, s, t, path):
     plt.title("schedules")
     plt.legend(p)
     plt.savefig(path + '/schedules.png')
-    plt.show()
+    plt.close(fig)
+    # plt.show()
 
 
 def plot_storage(p, s, t, path):
@@ -75,7 +77,8 @@ def plot_storage(p, s, t, path):
     plt.title("stored PPE")
     plt.legend(p)
     plt.savefig(path + '/storage.png')
-    plt.show()
+    plt.close(fig)
+    # plt.show()
 
 
 def plot_forecasted_values(p, d, fc_d, t, path):
@@ -88,7 +91,8 @@ def plot_forecasted_values(p, d, fc_d, t, path):
     plt.title("forecasted demand")
     plt.legend([p, p])
     plt.savefig(path + '/forecasts.png')
-    plt.show()
+    plt.close(fig)
+    # plt.show()
 
 
 def calc_savings(costs, ref, p):
