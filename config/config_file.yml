@@ -6,8 +6,9 @@ repeat: 1
 
 # general
 num-players: 7
-schedule-length: 20
+#schedule-length: 20
 start-date: '23/03/2020'
+end-date: '24/03/2020'
 demand-file: './data/second_peak_Dec01.csv'
 storage-file: './config/storage_details.csv'
 additional-storage: 0.0

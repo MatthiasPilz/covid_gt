@@ -11,8 +11,10 @@ class Config:
         self.debug_flag = params['debug-flag']
         self.plot_flag = params['plot-flag']
         self.num_players = int(params['num-players'])
-        self.schedule_length = int(params['schedule-length'])
         self.start_date = datetime.datetime.strptime(params['start-date'], '%d/%m/%Y')
+        self.end_date = datetime.datetime.strptime(params['end-date'], '%d/%m/%Y')
+        # self.schedule_length = int(params['schedule-length'])
+        self.schedule_length = self.schedule_length = (self.end_date.date() - self.start_date.date()).days
         self.forecast_error = float(params['forecast-error'])
 
         # pricing
@@ -75,15 +77,17 @@ class Config:
     def create_output_name_from_parameters(self):
         result = ""
         result += self.start_date.strftime('%d%b%Y') + "_"
-        result += self.demand_file[-9:-4] + "_"
+        result += self.demand_file[-12:-4] + "_"
         result += "storage" + str(self.additional_storage) + "/"
         return result
 
-    def reset_for_new_configuration(self, new_start_date, new_demand_file, new_additional_storage, new_schedule_length=100):
+    def reset_for_new_configuration(self, new_start_date, new_demand_file, new_end_date, new_additional_storage):
         self.start_date = datetime.datetime.strptime(new_start_date, '%d/%m/%Y')
+        self.end_date = datetime.datetime.strptime(new_end_date, '%d/%m/%Y')
         self.demand_file = new_demand_file
         self.additional_storage = new_additional_storage
-        self.schedule_length = new_schedule_length
+
+        self.schedule_length = (self.end_date.date() - self.start_date.date()).days
 
         self.output_name = self.create_output_name_from_parameters()
         self.output_path = self.create_output_dir()

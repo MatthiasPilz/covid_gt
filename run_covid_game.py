@@ -16,15 +16,29 @@ def main():
     config_file = args.config
     config = Config(config_file)
 
-    dates = ["10/04/2020", "23/03/2020"]
-    lengths = [10, 20]
-    demands = ["./data/covid_allDemand.csv", "./data/second_peak_Dec01.csv"]
-    storages = [0.0, 10.0]
+    # important parameters
+    # matthias:
+    start_dates = ["31/01/2020", "07/02/2020", "28/02/2020", "11/03/2020"]
+    # khaled:
+    # start_dates = ["20/03/2020"]
 
-    for date, length in zip(dates, lengths):
-        for demand in demands:
+    demands = ["./data/Demand_Oct_Wave.csv",
+               "./data/Demand_Nov_Wave.csv",
+               "./data/Demand_Dec_Wave.csv",
+               "./data/Demand_Jan_Wave.csv",
+               "./data/Demand_Feb_Wave.csv"]
+    end_dates = ["20/01/2021", "20/02/2021", "20/03/2021", "20/04/2021", "20/05/2021"]
+
+    storages = [0.0, 4.0, 9.0, 14.0, 19.0]
+
+    for date in start_dates:
+        for demand, end_date in zip(demands, end_dates):
             for storage in storages:
-                config.reset_for_new_configuration(date, demand, storage, length)
+                config.reset_for_new_configuration(new_start_date=date,
+                                                   new_end_date=end_date,
+                                                   new_demand_file=demand,
+                                                   new_additional_storage=storage)
+
                 game = Game(config)
                 _ = game.solve_game()
                 plot_all(game, config.get_output_path())
