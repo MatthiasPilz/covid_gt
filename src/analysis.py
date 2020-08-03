@@ -231,7 +231,7 @@ def main():
     print('minimum savings overall: ', maximum)
 
     for date, date_alt in zip(start_dates, start_dates_alt):
-        fig, _ = pd_heatmap(savings_dict[date_alt], cmap="YlGn", vmin=minimum, vmax=maximum)
+        fig, _ = pd_heatmap(savings_dict[date_alt], cmap="summer_r", vmin=minimum, vmax=maximum)
         annotate_heatmap(fig, valfmt="{x:.1f} %", textcolors=["black", "white"], threshold=(maximum+minimum)//2)
         # plt.show()
         plt.title("start date: " + date_alt)
