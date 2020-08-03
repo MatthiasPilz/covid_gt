@@ -19,16 +19,16 @@ def main():
         "31/01/2020",
         "07/02/2020",
         "28/02/2020",
-    #   "11/03/2020"
+    #   "11/03/2020",
+        "20/03/2020"
     ]
     start_dates_alt = [
         "31Jan2020",
         "07Feb2020",
         "28Feb2020",
-    #   "11Mar2020"
+    #   "11Mar2020",
+        "20Mar2020"
     ]
-    # khaled:
-    # start_dates = ["20/03/2020"]
 
     demands = [
         "./data/Demand_Oct_Wave.csv",
@@ -42,7 +42,7 @@ def main():
         "20/02/2021",
         "20/03/2021",
         "20/04/2021",
-            "20/05/2021"
+        "20/05/2021"
     ]
 
     storages = [0.0, 4.0, 9.0, 14.0, 19.0]
@@ -56,7 +56,6 @@ def main():
 
         savings = pd.DataFrame(index=index, columns=columns, dtype=np.float)
         savings = savings.fillna(0.0)
-        # savings = [[0 for i in range(len(demands))] for j in range(len(storages))]
 
         for i, (demand, *_) in enumerate(zip(demands, end_dates)):
             for j, storage in enumerate(storages):
@@ -81,7 +80,6 @@ def main():
                     total_costs_ref += costs_ref[p]
 
                 savings.at[demand[-12:-9], str(storage+1)] = 100.0 * (1.0 - (total_costs_ref / total_costs))
-                # savings[i][j] = 1.0 - (total_costs_ref / total_costs)
 
         sns_plot = sns.heatmap(savings)
         fig = sns_plot.get_figure()
@@ -92,9 +90,6 @@ def main():
         # plt.show()
         fig.savefig("../analysis/savings_startdate" + date_alt + ".png")
         plt.close(fig)
-        # save data in new location
-        # plot image
-        # save plot
 
 
 if __name__ == '__main__':
