@@ -37,5 +37,5 @@ pricing-coeff:
 max-time: 1300
 max-iter-game: 20
 max-iter-opt: 1000
-eps: 3
+eps: 10
 
