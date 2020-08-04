@@ -75,7 +75,7 @@ class Config:
         return file_name
 
     def create_output_name_from_parameters(self):
-        result = ""
+        result = "onlySecondPeak_"
         result += self.start_date.strftime('%d%b%Y') + "_"
         result += self.demand_file[-12:-4] + "_"
         result += "storage" + str(self.additional_storage) + "/"

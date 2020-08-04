@@ -151,14 +151,14 @@ def main():
         "31/01/2020",
         "07/02/2020",
         "28/02/2020",
-    #   "11/03/2020",
+        "11/03/2020",
         "20/03/2020"
     ]
     start_dates_alt = [
         "31Jan2020",
         "07Feb2020",
         "28Feb2020",
-    #   "11Mar2020",
+        "11Mar2020",
         "20Mar2020"
     ]
 
@@ -231,8 +231,8 @@ def main():
     print('minimum savings overall: ', maximum)
 
     for date, date_alt in zip(start_dates, start_dates_alt):
-        fig, _ = pd_heatmap(savings_dict[date_alt], cmap="summer_r", vmin=minimum, vmax=maximum)
-        annotate_heatmap(fig, valfmt="{x:.1f} %", textcolors=["black", "white"], threshold=(maximum+minimum)//2)
+        fig, _ = pd_heatmap(savings_dict[date_alt], cmap="RdYlGn", vmin=minimum, vmax=maximum)
+        # annotate_heatmap(fig, valfmt="{x:.1f} %", textcolors=["black", "white"], threshold=(maximum+minimum)//2)
         # plt.show()
         plt.title("start date: " + date_alt)
         plt.savefig("../analysis/savings_startdate" + date_alt + ".png")

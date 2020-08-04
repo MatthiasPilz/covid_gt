@@ -21,6 +21,7 @@ def main():
     start_dates = ["31/01/2020", "07/02/2020", "28/02/2020", "11/03/2020"]
     # khaled:
     # start_dates = ["20/03/2020"]
+    start_dates = ["01/08/2020"]
 
     demands = ["./data/Demand_Oct_Wave.csv",
                "./data/Demand_Nov_Wave.csv",
