@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib as m
+from matplotlib.ticker import AutoMinorLocator
 
 
 def _heatmap(data, row_labels, col_labels, ax=None, cbar_kw={}, cbarlabel="", **kwargs):
@@ -34,16 +35,17 @@ def _heatmap(data, row_labels, col_labels, ax=None, cbar_kw={}, cbarlabel="", **
     # Plot the heatmap
     im = ax.imshow(data, **kwargs)
 
-    # Create colorbar
-    cbar = ax.figure.colorbar(im, ax=ax, **cbar_kw)
-    cbar.ax.set_ylabel(cbarlabel, rotation=-90, va="bottom")
+    # # Create colorbar
+    # cbar = ax.figure.colorbar(im, ax=ax, **cbar_kw)
+    # cbar.ax.set_ylabel(cbarlabel, rotation=-90, va="bottom")
+    cbar = 0
 
     # We want to show all ticks...
-    ax.set_xticks(np.arange(data.shape[1]))
-    ax.set_yticks(np.arange(data.shape[0]))
+    ax.set_xticks(7*np.arange(data.shape[1]//7)+3)
+    ax.set_yticks(5*np.arange(data.shape[0]//5)+2)
     # ... and label them with the respective list entries.
-    ax.set_xticklabels(col_labels)
-    ax.set_yticklabels(row_labels)
+    ax.set_xticklabels([col_labels[i][:-7] for i in range(1, len(col_labels), 7)])
+    ax.set_yticklabels([row_labels[i][:-1] for i in range(1, len(row_labels), 5)])
 
     # Let the horizontal axes labeling appear on top.
     ax.tick_params(top=False, bottom=True, labeltop=False, labelbottom=True)
@@ -52,15 +54,16 @@ def _heatmap(data, row_labels, col_labels, ax=None, cbar_kw={}, cbarlabel="", **
     plt.setp(ax.get_xticklabels(), rotation=0, ha="center", rotation_mode="anchor")
 
     plt.xlabel("amount of storage (multiplier)")
-    plt.ylabel("peak of second wave")
+    plt.ylabel("beginning of stockpiling")
 
     # Turn spines off and create white grid.
     for edge, spine in ax.spines.items():
         spine.set_visible(False)
 
-    ax.set_xticks(np.arange(data.shape[1]+1)-.5, minor=True)
-    ax.set_yticks(np.arange(data.shape[0]+1)-.5, minor=True)
-    ax.grid(which="minor", color="w", linestyle='-', linewidth=3)
+    # ax.set_xticks(np.arange(data.shape[1]+1)-.5, minor=True)
+    ax.set_xticks([6.5, 13.5, 20.5, 27.5, 34.5], minor=True)
+    ax.set_yticks([4.5, 9.5, 14.5, 19.5, 24.5, 25], minor=True)
+    ax.grid(which="minor", color="w", linestyle='-', linewidth=4)
     ax.tick_params(which="minor", bottom=False, left=False)
 
     return im, cbar
@@ -155,11 +158,11 @@ def main():
         "20/03/2020"
     ]
     start_dates_alt = [
-        "31Jan2020",
-        "07Feb2020",
-        "28Feb2020",
-        "11Mar2020",
-        "20Mar2020"
+        "31 Jan",
+        "07 Feb",
+        "28 Feb",
+        "11 Mar",
+        "20 Mar"
     ]
 
     demands = [
@@ -183,7 +186,14 @@ def main():
 
     savings_dict = {}
 
-    for date, date_alt in zip(start_dates, start_dates_alt):
+    labels = [x for x in start_dates_alt]
+    labels = [label+str(i) for label in labels for i in range(5)]
+    complete_df = pd.DataFrame(index=labels,
+                               columns=[str(x+1)+"_"+player for x in storages for player in players],
+                               dtype=np.float)
+    complete_df = complete_df.fillna(0.0)
+
+    for k, (date, date_alt) in enumerate(zip(start_dates, start_dates_alt)):
 
         index = [x[-12:-9] for x in demands]
         columns = [str(x+1) for x in storages]
@@ -214,7 +224,18 @@ def main():
                     total_costs += costs[p]
                     total_costs_ref += costs_ref[p]
 
-                savings_dict[date_alt].at[demand[-12:-9], str(storage+1)] = -100.0 * (1.0 - (total_costs_ref / total_costs))
+                value = -100.0 * (1.0 - (total_costs_ref / total_costs))
+                savings_dict[date_alt].at[demand[-12:-9], str(storage+1)] = value
+
+                for p_index, p in enumerate(players):
+                    complete_df.at[date_alt+str(i), str(storage+1)+"_"+p] = -100.0 * (1.0 - (costs_ref[p] / costs[p]))
+                # complete_df.at[date_alt+str(i), str(storage+1)+"_0"] = value
+                # complete_df.at[date_alt+str(i), str(storage+1)+"_1"] = value
+                # complete_df.at[date_alt+str(i), str(storage+1)+"_2"] = value
+                # complete_df.at[date_alt+str(i), str(storage+1)+"_3"] = value
+                # complete_df.at[date_alt+str(i), str(storage+1)+"_4"] = value
+                # complete_df.at[date_alt+str(i), str(storage+1)+"_5"] = value
+                # complete_df.at[date_alt+str(i), str(storage+1)+"_6"] = value
 
     # calculate min and max for consistent axis
     minimum = np.float('inf')
@@ -230,18 +251,22 @@ def main():
     print('maximum savings overall: ', minimum)
     print('minimum savings overall: ', maximum)
 
-    for date, date_alt in zip(start_dates, start_dates_alt):
-        fig, _ = pd_heatmap(savings_dict[date_alt], cmap="RdYlGn", vmin=minimum, vmax=maximum)
-        # annotate_heatmap(fig, valfmt="{x:.1f} %", textcolors=["black", "white"], threshold=(maximum+minimum)//2)
-        # plt.show()
-        plt.title("start date: " + date_alt)
-        plt.savefig("../analysis/savings_startdate" + date_alt + ".png")
-        plt.close()
+    # for date, date_alt in zip(start_dates, start_dates_alt):
+    #     fig, _ = pd_heatmap(savings_dict[date_alt], cmap="RdYlGn", vmin=minimum, vmax=maximum)
+    #     # annotate_heatmap(fig, valfmt="{x:.1f} %", textcolors=["black", "white"], threshold=(maximum+minimum)//2)
+    #     # plt.show()
+    #     plt.title("start date: " + date_alt)
+    #     plt.savefig("../analysis/savings_startdate" + date_alt + ".png")
+    #     plt.close()
+
+    fig, _ = pd_heatmap(complete_df, cmap="RdYlGn", vmin=minimum, vmax=maximum)
+    plt.tight_layout()
+    plt.savefig("../analysis/complete_savings.png", dpi=600)
+    plt.close()
 
 
 if __name__ == '__main__':
     main()
     exit(0)
-
 
 
